@@ -1,3 +1,189 @@
+/* основное */
 body {
-    background-color: blueviolet;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
 }
+
+main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+footer {
+    display: flex;
+    width: 100%;
+}
+
+/* Стили для шапки */
+header {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.title>a {
+    text-decoration: none;
+    color: black;
+}
+
+.tab {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    flex-direction: row;
+    height: 10vw;
+    background-color: #dee2e6;
+}
+
+.button-tag {
+    display: flex;
+    align-items: center;
+    border: 2px solid black;
+    border-radius: 5px;
+    padding: 5px;
+    cursor: pointer;
+    background-color: white;
+    transition: all 0.5s ease;
+}
+
+.button-tag:hover {
+    transition: 100ms;
+    border: 2px solid sandybrown;
+}
+
+.text-tab {
+    font-size: 1em;
+}
+
+.circle-tab {
+    height: 2vw;
+    width: 2vw;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.circle-red {
+    background-color: red;
+}
+
+.circle-orange {
+    background-color: orange;
+}
+
+.circle-blue {
+    background-color: blue;
+}
+
+/* сползающая панель */
+.sliding {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: #f8f9fa;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out;
+    max-height: 0;
+}
+
+.sliding.active {
+    max-height: 400px;
+    border-bottom: 2px solid #dee2e6;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* улементы сползающего меню */
+.functions-category {
+    display: none;
+    width: 100%;
+}
+
+.functions-category.active {
+    display: flex;
+}
+
+.sliding-content {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 24px;
+    width: 100%;
+}
+
+.function-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    flex: 0 1 auto;
+    min-width: 160px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    position: relative;
+}
+
+#category-operators .function-item {
+    border-left: 6px solid red;
+}
+
+#category-variables .function-item {
+    border-left: 6px solid orange;
+}
+
+#category-events .function-item {
+    border-left: 6px solid blue;
+}
+
+.function-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #b0b0b0;
+}
+
+#category-operators .function-item:hover {
+    background-color: #fff5f5;
+}
+
+#category-variables .function-item:hover {
+    background-color: #fff9e6;
+}
+
+#category-events .function-item:hover {
+    background-color: #f0f7ff;
+}
+
+.function-item:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.function-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #212529;
+}
+
+.function-desc {
+    font-size: 14px;
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+    background-color: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+    width: 100%;
+}
+
+/* новый сили */
