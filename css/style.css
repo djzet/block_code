@@ -18,7 +18,7 @@ footer {
     width: 100%;
 }
 
-/* Стили для шапки */
+/* стили для шапки */
 header {
     display: flex;
     flex-direction: column;
@@ -32,11 +32,12 @@ header {
 
 .tab {
     display: flex;
-    justify-content: space-evenly;
+    justify-content: space-between;
     align-items: center;
     flex-direction: row;
-    height: 10vw;
+    height: 5vw;
     background-color: #dee2e6;
+    padding: 24px;
 }
 
 .button-tag {
@@ -51,7 +52,7 @@ header {
 }
 
 .button-tag:hover {
-    transition: 100ms;
+    transition: 0.1s;
     border: 2px solid sandybrown;
 }
 
@@ -60,8 +61,8 @@ header {
 }
 
 .circle-tab {
-    height: 2vw;
-    width: 2vw;
+    height: 20px;
+    width: 20px;
     border-radius: 50%;
     margin-right: 10px;
 }
@@ -186,4 +187,131 @@ header {
     width: 100%;
 }
 
-/* новый сили */
+/* рабочая область */
+.workspace-container {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    background-color: #f1f3f5;
+    min-height: 400px;
+    flex: 1;
+}
+
+.workspace-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.workspace-header h2 {
+    font-size: 1.5rem;
+    color: #212529;
+    margin: 0;
+}
+
+.workspace {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 16px;
+    padding: 24px;
+    background-color: white;
+    border: 2px dashed #adb5bd;
+    border-radius: 12px;
+    min-height: 300px;
+    flex: 1;
+    transition: background-color 0.2s ease;
+}
+
+.workspace.drag-over {
+    background-color: #e7f5ff;
+    border-color: #339af0;
+}
+
+.workspace-placeholder {
+    width: 100%;
+    text-align: center;
+    color: #868e96;
+    font-size: 1.1rem;
+    padding: 40px 20px;
+    pointer-events: none;
+}
+
+/* элементы рабочей области */
+.workspace-item {
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
+    min-width: 180px;
+    max-width: 250px;
+    cursor: move;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    user-select: none;
+    position: relative;
+}
+
+.workspace-item.operator-item {
+    border-left: 6px solid red;
+}
+
+.workspace-item.variable-item {
+    border-left: 6px solid orange;
+}
+
+.workspace-item.event-item {
+    border-left: 6px solid blue;
+}
+
+.workspace-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.workspace-item .item-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 4px;
+}
+
+.workspace-item .item-desc {
+    font-size: 13px;
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+    background-color: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.workspace-item .remove-item {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.workspace-item:hover .remove-item {
+    opacity: 1;
+}
+
+.workspace-item .remove-item:hover {
+    background-color: #ff8787;
+    transform: scale(1.1);
+}
