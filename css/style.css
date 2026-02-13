@@ -32,11 +32,12 @@ header {
 
 .tab {
     display: flex;
-    justify-content: space-evenly;
+    justify-content: space-between;
     align-items: center;
     flex-direction: row;
     height: 5vw;
     background-color: #dee2e6;
+    padding: 24px;
 }
 
 .button-tag {
