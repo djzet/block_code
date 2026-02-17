@@ -1,4 +1,4 @@
-/* основное */
+/* Основное */
 body {
     display: flex;
     flex-direction: column;
@@ -18,7 +18,7 @@ footer {
     width: 100%;
 }
 
-/* стили для шапки */
+/* Стили для шапки */
 header {
     display: flex;
     flex-direction: column;
@@ -67,6 +67,10 @@ header {
     margin-right: 10px;
 }
 
+.circle-pink {
+    background-color: pink;
+}
+
 .circle-red {
     background-color: red;
 }
@@ -79,7 +83,7 @@ header {
     background-color: blue;
 }
 
-/* сползающая панель */
+/* Сползающая панель */
 .sliding {
     display: flex;
     flex-direction: column;
@@ -96,7 +100,7 @@ header {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-/* улементы сползающего меню */
+/* Элементы сползающего меню */
 .functions-category {
     display: none;
     width: 100%;
@@ -126,12 +130,17 @@ header {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     padding: 16px 20px;
+    margin-bottom: 4px;
     flex: 0 1 auto;
     min-width: 160px;
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     position: relative;
+}
+
+#category-starts .function-item {
+    border-left: 6px solid pink;
 }
 
 #category-operators .function-item {
@@ -152,15 +161,23 @@ header {
     border-color: #b0b0b0;
 }
 
-#category-operators .function-item:hover {
+#category-starts .function-item:hover,
+.function-item.starts-item:hover {
     background-color: #fff5f5;
 }
 
-#category-variables .function-item:hover {
+#category-operators .function-item:hover,
+.function-item.operator-item:hover {
+    background-color: #fff5f5;
+}
+
+#category-variables .function-item:hover,
+.function-item.variable-item:hover {
     background-color: #fff9e6;
 }
 
-#category-events .function-item:hover {
+#category-events .function-item:hover,
+.function-item.event-item:hover {
     background-color: #f0f7ff;
 }
 
@@ -187,7 +204,24 @@ header {
     width: 100%;
 }
 
-/* рабочая область */
+.function-item::after,
+.workspace-item::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    bottom: -10px;
+    transform: translateY(-50%);
+    left: 20px;
+    right: 0;
+    height: 20px;
+    background-color: unset;
+    pointer-events: none;
+    border-radius: 5px 0 0 5px;
+    border: 1px solid black;
+    border-right: 0;
+}
+
+/* Рабочая область */
 .workspace-container {
     display: flex;
     flex-direction: column;
@@ -238,20 +272,25 @@ header {
     pointer-events: none;
 }
 
-/* элементы рабочей области */
 .workspace-item {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
     background-color: white;
-    border: 1px solid #dee2e6;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
-    padding: 16px;
-    min-width: 180px;
-    max-width: 250px;
+    padding: 16px 20px;
+    margin-bottom: 4px;
+    min-width: 160px;
     cursor: move;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-    user-select: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     position: relative;
+    user-select: none;
+}
+
+.workspace-item.starts-item {
+    border-left: 6px solid pink;
 }
 
 .workspace-item.operator-item {
@@ -268,23 +307,31 @@ header {
 
 .workspace-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #b0b0b0;
+}
+
+.workspace-item:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .workspace-item .item-name {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
+    margin-bottom: 6px;
     color: #212529;
-    margin-bottom: 4px;
 }
 
 .workspace-item .item-desc {
-    font-size: 13px;
+    font-size: 14px;
     color: #6c757d;
     font-family: 'Courier New', monospace;
     background-color: #f8f9fa;
     padding: 4px 8px;
     border-radius: 4px;
+    margin-top: 4px;
+    width: 100%;
 }
 
 .workspace-item .remove-item {

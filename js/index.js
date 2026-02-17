@@ -1,20 +1,22 @@
-// константы
+// Константы
 const CATEGORIES = {
+    START: 'starts',
     OPERATOR: 'operator',
     VARIABLE: 'variable',
     EVENT: 'event'
 };
 
 const CATEGORY_SELECTORS = {
+    [CATEGORIES.START]: '#category-starts',
     [CATEGORIES.OPERATOR]: '#category-operators',
     [CATEGORIES.VARIABLE]: '#category-variables',
     [CATEGORIES.EVENT]: '#category-events'
 };
 
-const DEFAULT_POSITION = { left: 50, top: 50 };
-const ANIMATION_DURATION = 500;
+const DEFAULT_POSITION = { left: 60, top: 60 };
+const ANIMATION_DURATION = 420;
 
-// состояния
+// Состояния приложения
 const state = {
     drag: {
         activeItem: null,
@@ -27,190 +29,138 @@ const state = {
     }
 };
 
-// утилиты
+// Утилиты
 const $ = selector => document.querySelector(selector);
+
 const $$ = selector => document.querySelectorAll(selector);
 
-/**
- * ограничивает значение числа в заданном диапазоне
- * @param {number} value - исходное значение
- * @param {number} min - минимальное допустимое значение
- * @param {number} max - максимальное допустимое значение
- * @returns {number} - ограниченное значение
- */
 const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
-/**
- * определяет категорию элемента на основе его родительского контейнера
- * @param {HTMLElement} element - DOM элемент для определения категории
- * @returns {string} - ключ категории из CATEGORIES
- */
-const getCategoryFromElement = element => {
-    if (element.closest('#category-variables')) return CATEGORIES.VARIABLE;
-    if (element.closest('#category-events')) return CATEGORIES.EVENT;
+const getCategoryFromElement = el => {
+    if (el.closest(CATEGORY_SELECTORS[CATEGORIES.START])) return CATEGORIES.START;
+    if (el.closest(CATEGORY_SELECTORS[CATEGORIES.VARIABLE])) return CATEGORIES.VARIABLE;
+    if (el.closest(CATEGORY_SELECTORS[CATEGORIES.EVENT])) return CATEGORIES.EVENT;
     return CATEGORIES.OPERATOR;
 };
 
-/**
- * извлекает данные элемента для переноса
- * @param {HTMLElement} element - элемент функции из меню
- * @returns {Object} - объект с name, description и category элемента
- */
-const getItemData = element => ({
-    name: element.querySelector('.function-name')?.textContent || 'Элемент',
-    description: element.querySelector('.function-desc')?.textContent || 'Описание',
-    category: getCategoryFromElement(element)
+const getItemData = el => ({
+    name: el.querySelector('.function-name')?.textContent?.trim() || 'Элемент',
+    description: el.querySelector('.function-desc')?.textContent?.trim() || '',
+    category: getCategoryFromElement(el)
 });
 
-// работа с рабочей областью
+
+// Работа с рабочей областью
 const workspace = {
     element: $('#workspace'),
 
-    /**
-     * инициализирует рабочую область
-     * устанавливает начальные стили, настраивает обработчики событий для drag and drop
-     */
     init() {
         this.element.style.position = 'relative';
-        this.element.style.minHeight = '400px';
+        this.element.style.overflow = 'hidden';
         this.setupDrop();
         this.checkEmpty();
+        window.addEventListener('resize', () => this.updatePositionsOnResize());
     },
 
-    /**
-     * создает новый элемент в рабочей области
-     * @param {Object} params - параметры элемента
-     * @param {string} params.name - название элемента
-     * @param {string} params.description - описание элемента
-     * @param {string} params.category - категория элемента
-     * @returns {HTMLElement} - созданный элемент рабочей области
-     */
     createItem({ name, description, category }) {
-        const id = `workspace-item-${Date.now()}-${Math.random()}`;
+        const id = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const item = document.createElement('div');
+        item.className = `workspace-item ${category}-item`;
+        item.id = id;
 
-        Object.assign(item, {
-            className: `workspace-item ${category}-item`,
-            id,
-            innerHTML: `
-        <div class="item-name">${name}</div>
-        <div class="item-desc">${description}</div>
-        <button class="remove-item" title="Удалить">×</button>
-      `
-        });
+        item.innerHTML = `
+            <div class="item-name">${name}</div>
+            <div class="item-desc">${description}</div>
+            <button class="remove-item" title="Удалить">×</button>
+        `;
 
-        Object.assign(item.style, {
-            position: 'absolute',
-            left: `${DEFAULT_POSITION.left}px`,
-            top: `${DEFAULT_POSITION.top}px`,
-            cursor: 'grab',
-            userSelect: 'none'
-        });
+        item.style.position = 'absolute';
+        item.style.left = DEFAULT_POSITION.left + 'px';
+        item.style.top = DEFAULT_POSITION.top + 'px';
+        item.style.cursor = 'grab';
+        item.style.userSelect = 'none';
 
-        Object.assign(item.dataset, { name, description, category });
+        item.dataset.name = name;
+        item.dataset.description = description;
+        item.dataset.category = category;
 
         this.attachItemEvents(item);
         return item;
     },
 
-    /**
-     * прикрепляет обработчики событий к элементу рабочей области
-     * @param {HTMLElement} item - элемент рабочей области
-     */
     attachItemEvents(item) {
-        item.querySelector('.remove-item').addEventListener('click', (e) => {
+        item.querySelector('.remove-item').onclick = e => {
             e.stopPropagation();
             item.remove();
-            this.checkEmpty();
-        });
+            workspace.checkEmpty();
+        };
 
-        item.addEventListener('mousedown', this.handleDragStart);
-        item.addEventListener('dragstart', e => e.preventDefault());
+        item.onmousedown = e => this.handleDragStart(e, item);
+        item.ondragstart = e => e.preventDefault();
     },
 
-    /**
-     * обрабатывает начало перетаскивания элемента рабочей области
-     * @param {MouseEvent} e - событие мыши
-     */
-    handleDragStart(e) {
-        if (e.target.classList.contains('remove-item')) return;
+    handleDragStart(e, item) {
+        if (e.target.closest('.remove-item')) return;
         e.preventDefault();
 
-        const item = e.target.closest('.workspace-item');
-        if (!item) return;
-
         const rect = item.getBoundingClientRect();
-        const workspaceRect = workspace.element.getBoundingClientRect();
+        const wsRect = this.element.getBoundingClientRect();
 
         state.drag.activeItem = item;
         state.drag.offsetX = e.clientX - rect.left;
         state.drag.offsetY = e.clientY - rect.top;
 
-        Object.assign(item.style, { cursor: 'grabbing' });
+        item.style.cursor = 'grabbing';
         item.classList.add('dragging');
 
-        document.addEventListener('mousemove', workspace.onDrag);
-        document.addEventListener('mouseup', workspace.stopDrag);
+        document.addEventListener('mousemove', this.onDrag);
+        document.addEventListener('mouseup', this.stopDrag, { once: true });
     },
 
-    /**
-     * обрабатывает перемещение элемента рабочей области
-     * @param {MouseEvent} e - событие мыши
-     */
-    onDrag(e) {
+    onDrag: e => {
         if (!state.drag.activeItem) return;
         e.preventDefault();
 
         const item = state.drag.activeItem;
-        const workspaceRect = workspace.element.getBoundingClientRect();
+        const wsRect = workspace.element.getBoundingClientRect();
 
-        let newLeft = e.clientX - state.drag.offsetX;
-        let newTop = e.clientY - state.drag.offsetY;
+        let newLeft = e.clientX - state.drag.offsetX - wsRect.left;
+        let newTop = e.clientY - state.drag.offsetY - wsRect.top;
 
-        newLeft = clamp(newLeft, workspaceRect.left, workspaceRect.right - item.offsetWidth);
-        newTop = clamp(newTop, workspaceRect.top, workspaceRect.bottom - item.offsetHeight);
+        newLeft = clamp(newLeft, 0, wsRect.width - item.offsetWidth);
+        newTop = clamp(newTop, 0, wsRect.height - item.offsetHeight);
 
-        const left = newLeft - workspaceRect.left;
-        const top = newTop - workspaceRect.top;
+        item.style.left = newLeft + 'px';
+        item.style.top = newTop + 'px';
 
-        Object.assign(item.style, { left: left + 'px', top: top + 'px' });
-
-        const leftPercent = (left / workspaceRect.width) * 100;
-        const topPercent = (top / workspaceRect.height) * 100;
-        Object.assign(item.dataset, { leftPercent, topPercent });
+        item.dataset.leftPercent = (newLeft / wsRect.width) * 100;
+        item.dataset.topPercent = (newTop / wsRect.height) * 100;
     },
 
-    /**
-     * завершает перетаскивание элемента
-     */
-    stopDrag() {
+    stopDrag: () => {
         if (state.drag.activeItem) {
-            Object.assign(state.drag.activeItem.style, { cursor: 'grab' });
-            state.drag.activeItem.classList.remove('dragging');
+            const item = state.drag.activeItem;
+            item.style.cursor = 'grab';
+            item.classList.remove('dragging');
             state.drag.activeItem = null;
         }
-
         document.removeEventListener('mousemove', workspace.onDrag);
-        document.removeEventListener('mouseup', workspace.stopDrag);
     },
 
-    /**
-     * настраивает возможность сброса элементов в рабочую область
-     */
     setupDrop() {
-        this.element.addEventListener('dragover', (e) => {
+        this.element.ondragover = e => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
             this.element.classList.add('drag-over');
-        });
+        };
 
-        this.element.addEventListener('dragleave', (e) => {
+        this.element.ondragleave = e => {
             if (!this.element.contains(e.relatedTarget)) {
                 this.element.classList.remove('drag-over');
             }
-        });
+        };
 
-        this.element.addEventListener('drop', (e) => {
+        this.element.ondrop = e => {
             e.preventDefault();
             this.element.classList.remove('drag-over');
 
@@ -219,76 +169,73 @@ const workspace = {
                 const item = this.createItem(data);
 
                 const rect = this.element.getBoundingClientRect();
-                let dropX = e.clientX - rect.left;
-                let dropY = e.clientY - rect.top;
+                let x = e.clientX - rect.left - (item.offsetWidth / 2);
+                let y = e.clientY - rect.top - (item.offsetHeight / 2);
 
-                dropX = clamp(dropX, 0, rect.width - item.offsetWidth);
-                dropY = clamp(dropY, 0, rect.height - item.offsetHeight);
+                x = clamp(x, 0, rect.width - item.offsetWidth);
+                y = clamp(y, 0, rect.height - item.offsetHeight);
 
-                Object.assign(item.style, { left: dropX + 'px', top: dropY + 'px' });
+                item.style.left = x + 'px';
+                item.style.top = y + 'px';
+
+                item.dataset.leftPercent = (x / rect.width) * 100;
+                item.dataset.topPercent = (y / rect.height) * 100;
 
                 this.element.appendChild(item);
                 this.removePlaceholder();
-            } catch (error) {
-                console.error('Ошибка при добавлении элемента:', error);
+                this.checkEmpty();
+            } catch (err) {
+                console.warn('Ошибка при drop:', err);
             }
-        });
+        };
     },
 
-    /**
-     * удаляет плейсхолдер рабочей области
-     */
     removePlaceholder() {
-        $$('.workspace-placeholder').forEach(p => p.remove());
+        $$('.workspace-placeholder').forEach(el => el.remove());
     },
 
-    /**
-     * проверяет наличие элементов в рабочей области
-     * при отсутствии элементов добавляет плейсхолдер
-     */
     checkEmpty() {
         if ($$('.workspace-item').length === 0 && !$('.workspace-placeholder')) {
-            const placeholder = document.createElement('div');
-            placeholder.className = 'workspace-placeholder';
-            placeholder.textContent = 'Перетащите сюда элементы из меню';
-            Object.assign(placeholder.style, {
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '100%'
-            });
-            this.element.appendChild(placeholder);
+            const ph = document.createElement('div');
+            ph.className = 'workspace-placeholder';
+            ph.textContent = 'Перетащите сюда блоки из меню';
+            this.element.appendChild(ph);
         }
     },
 
-    /**
-     * очищает рабочую область от всех элементов
-     */
     clear() {
-        $$('.workspace-item').forEach(item => item.remove());
+        $$('.workspace-item').forEach(el => el.remove());
         this.checkEmpty();
+    },
+
+    updatePositionsOnResize() {
+        $$('.workspace-item').forEach(item => {
+            const wsRect = this.element.getBoundingClientRect();
+            const lp = parseFloat(item.dataset.leftPercent) || 10;
+            const tp = parseFloat(item.dataset.topPercent) || 10;
+
+            item.style.left = (lp / 100 * wsRect.width) + 'px';
+            item.style.top = (tp / 100 * wsRect.height) + 'px';
+        });
     }
 };
 
-// работа с меню
+// Работа с меню
 const menu = {
     panel: $('.sliding'),
     buttons: {
+        starts: $('#button-tag-starts'),
         operators: $('#button-tag-operators'),
         variables: $('#button-tag-variables'),
         events: $('#button-tag-events')
     },
     categories: {
+        starts: $('#category-starts'),
         operators: $('#category-operators'),
         variables: $('#category-variables'),
         events: $('#category-events')
     },
 
-    /**
-     * инициализирует меню
-     * настраивает перетаскиваемые элементы, обработчики кнопок и отслеживание новых элементов
-     */
     init() {
         this.setupDraggableItems();
         this.setupButtonListeners();
@@ -296,66 +243,44 @@ const menu = {
         this.watchForNewItems();
     },
 
-    /**
-     * делает все элементы функций перетаскиваемыми
-     */
     setupDraggableItems() {
         $$('.function-item').forEach(item => this.makeDraggable(item));
     },
 
-    /**
-     * настраивает элемент для перетаскивания
-     * @param {HTMLElement} item - элемент для настройки перетаскивания
-     */
     makeDraggable(item) {
-        item.setAttribute('draggable', 'true');
+        item.draggable = true;
 
-        item.addEventListener('dragstart', (e) => {
+        item.ondragstart = e => {
             const data = getItemData(item);
             e.dataTransfer.setData('text/plain', JSON.stringify(data));
             e.dataTransfer.effectAllowed = 'copy';
             item.classList.add('dragging');
-        });
+        };
 
-        item.addEventListener('dragend', () => {
-            item.classList.remove('dragging');
-        });
+        item.ondragend = () => item.classList.remove('dragging');
     },
 
-    /**
-     * настраивает обработчики для кнопок категорий
-     */
     setupButtonListeners() {
-        Object.entries(this.buttons).forEach(([key, button]) => {
-            button.addEventListener('click', (e) => {
+        Object.entries(this.buttons).forEach(([key, btn]) => {
+            btn.onclick = e => {
                 e.stopPropagation();
-                this.toggle(button, this.categories[key]);
-            });
+                this.toggle(btn, this.categories[key]);
+            };
         });
     },
 
-    /**
-     * настраивает обработчики для закрытия меню
-     */
     setupCloseListeners() {
-        document.addEventListener('click', (e) => this.handleDocumentClick(e));
+        document.onclick = e => this.handleDocumentClick(e);
 
-        this.panel.addEventListener('click', e => e.stopPropagation());
-        workspace.element.addEventListener('click', e => e.stopPropagation());
-        $('.workspace-container')?.addEventListener('click', e => e.stopPropagation());
+        [this.panel, workspace.element, $('.workspace-container')].forEach(el => {
+            if (el) el.onclick = e => e.stopPropagation();
+        });
     },
 
-    /**
-     * скрывает все открытые категории
-     */
     hideAllCategories() {
-        Object.values(this.categories).forEach(cat => cat.classList.remove('active'));
+        Object.values(this.categories).forEach(c => c.classList.remove('active'));
     },
 
-    /**
-     * скрывает меню
-     * @param {Function} callback - функция, вызываемая после завершения анимации
-     */
     hide(callback) {
         if (!this.panel.classList.contains('active')) {
             callback?.();
@@ -371,66 +296,44 @@ const menu = {
         }, ANIMATION_DURATION);
     },
 
-    /**
-     * показывает указанную категорию
-     * @param {HTMLElement} button - нажатая кнопка
-     * @param {HTMLElement} category - натегория для отображения
-     */
-    show(button, category) {
+    show(btn, category) {
         this.hideAllCategories();
         category.classList.add('active');
         this.panel.classList.add('active');
-        state.menu.activeButton = button;
+        state.menu.activeButton = btn;
     },
 
-    /**
-     * переключает видимость категории
-     * @param {HTMLElement} button - нажатая кнопка
-     * @param {HTMLElement} category - категория для переключения
-     */
-    toggle(button, category) {
+    toggle(btn, category) {
         if (state.menu.isAnimating) return;
 
         state.menu.isAnimating = true;
 
-        if (state.menu.activeButton === button) {
+        if (state.menu.activeButton === btn) {
             this.hide(() => state.menu.isAnimating = false);
         } else {
             this.hide(() => {
-                this.show(button, category);
+                this.show(btn, category);
                 state.menu.isAnimating = false;
             });
         }
     },
 
-    /**
-     * обрабатывает клик по документу для закрытия меню
-     * @param {MouseEvent} e - событие клика
-     */
     handleDocumentClick(e) {
         if (state.menu.isAnimating) return;
 
-        const isExcluded = [
-            '.button-tag',
-            '.sliding',
-            '.workspace-container',
-            '#clear-workspace',
-            '.workspace-item',
-            '.remove-item'
-        ].some(selector => e.target.closest(selector));
+        const excluded = [
+            '.button-tag', '.sliding', '.workspace-container',
+            '#clear-workspace', '.workspace-item', '.remove-item'
+        ].some(sel => e.target.closest(sel));
 
-        if (isExcluded) return;
-
-        state.menu.isAnimating = true;
-        this.hide(() => state.menu.isAnimating = false);
+        if (!excluded) {
+            state.menu.isAnimating = true;
+            this.hide(() => state.menu.isAnimating = false);
+        }
     },
 
-    /**
-     * отслеживает появление новых элементов в меню
-     * автоматически делает их перетаскиваемыми
-     */
     watchForNewItems() {
-        const observer = new MutationObserver((mutations) => {
+        new MutationObserver(mutations => {
             mutations.forEach(({ addedNodes }) => {
                 addedNodes.forEach(node => {
                     if (node.nodeType === 1 && node.classList?.contains('function-item')) {
@@ -438,25 +341,21 @@ const menu = {
                     }
                 });
             });
-        });
-
-        observer.observe($('.sliding'), { childList: true, subtree: true });
+        }).observe($('.sliding'), { childList: true, subtree: true });
     }
 };
 
-// инициализация
+// Инициализация
 document.addEventListener('DOMContentLoaded', () => {
     workspace.init();
     menu.init();
 
-    $('#clear-workspace')?.addEventListener('click', (e) => {
+    $('#clear-workspace')?.addEventListener('click', e => {
         e.stopPropagation();
         workspace.clear();
     });
 
-    document.addEventListener('dragstart', (e) => {
-        if (['IMG', 'A'].includes(e.target.tagName)) {
-            e.preventDefault();
-        }
+    document.addEventListener('dragstart', e => {
+        if (['IMG', 'A'].includes(e.target.tagName)) e.preventDefault();
     });
 });
