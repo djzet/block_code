@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    /* Базовые настройки */
+    "target": "ES2020",                          /* Поддержка Object.entries, includes и т.д. */
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],    /* Библиотеки типов для браузера */
+    "module": "ESNext",                          /* Современный формат модулей */
+    "moduleResolution": "node",
+    
+    /* Куда складывать результат */
+    "outDir": "./",                            /* JS файлы будут создаваться в папке js */
+    "rootDir": "./",                             /* Корень исходников — корень проекта */
+
+    /* Строгость и проверки */
+    "strict": true,                              /* Включает все проверки типов */
+    "noImplicitAny": true,                       /* Запрещает неявный тип any */
+    "esModuleInterop": true,                     /* Совместимость с библиотеками */
+    "skipLibCheck": true,                        /* Пропускать проверку типов в библиотеках */
+    "forceConsistentCasingInFileNames": true,    /* Учет регистра в именах файлов */
+
+    /* Удобство разработки */
+    "sourceMap": true,                           /* Помогает отлаживать TS код в браузере */
+    "removeComments": false                      /* Оставлять комментарии в JS */
+  },
+  "include": [
+    "js/**/*.ts"                                 /* Компилировать все TS файлы в папке js */
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
