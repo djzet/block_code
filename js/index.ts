@@ -10,6 +10,7 @@ interface ItemData {
     name: string;        // Отображаемое имя блока
     description: string; // Краткое описание функционала
     category: Category;  // Категория (влияет на цвет и правила вложенности)
+    shape: string;       // Свойство формы
 }
 
 /**
@@ -73,7 +74,8 @@ class Utils {
         return {
             name: el.querySelector('.function-name')?.textContent?.trim() || 'Блок',
             description: el.querySelector('.function-desc')?.textContent?.trim() || '',
-            category: this.getCategory(el)
+            category: this.getCategory(el),
+            shape: el.dataset.shape || 'square'
         };
     }
 }
@@ -107,7 +109,8 @@ abstract class BaseBlock {
      */
     protected render(): HTMLDivElement {
         const item = document.createElement('div');
-        item.className = `workspace-item ${this.data.category}-item`;
+
+        item.className = `workspace-item ${this.data.category}-item shape-${this.data.shape}`;
         item.dataset.category = this.data.category;
 
         // Магия: привязываем объект класса прямо к DOM-элементу для легкого доступа
@@ -130,8 +133,9 @@ abstract class BaseBlock {
     /** 
      * Проверяет, может ли текущий блок принять в себя другой блок 
      * @param childCategory Категория вставляемого блока
+     * Метод проверки теперь принимает ФОРМУ дочернего блока
      */
-    public abstract canAccept(childCategory: Category): boolean;
+    public abstract canAccept(childCategory: Category, childShape: string): boolean;
 
     /** 
      * Указывает, разрешено ли этот блок вставлять внутрь других блоков 
@@ -169,8 +173,9 @@ class RootBlock extends BaseBlock {
     }
 
     /** Позволяет вставлять в себя любые блоки */
-    public canAccept(childCategory: Category): boolean {
-        return true;
+    public canAccept(childCategory: Category, childShape: string): boolean {
+        // Принимает только блоки ТАКОЙ ЖЕ ФОРМЫ
+        return this.data.shape === childShape;
     }
 
     /** ЗАПРЕЩАЕТ вставлять себя в другие блоки */
@@ -190,8 +195,9 @@ class ContainerBlock extends BaseBlock {
     }
 
     /** Разрешает вложенность любых категорий */
-    public canAccept(childCategory: Category): boolean {
-        return true;
+    public canAccept(childCategory: Category, childShape: string): boolean {
+        // Принимает только блоки ТАКОЙ ЖЕ ФОРМЫ
+        return this.data.shape === childShape;
     }
 
     /** РАЗРЕШАЕТ вставлять себя в другие блоки */
@@ -371,8 +377,8 @@ class Workspace {
                 const parentInstance = parentItem?.blockInstance as BaseBlock;
 
                 // Проверяем правила фильтрации: принимает ли контейнер эту категорию?
-                if (parentInstance && parentInstance.canAccept(this.activeBlock.data.category)) {
-                    // Защита от вставки блока внутрь самого себя
+                // Передаем форму активного блока для проверки
+                if (parentInstance && parentInstance.canAccept(this.activeBlock.data.category, this.activeBlock.data.shape)) {
                     if (this.activeBlock.element.contains(htmlEl)) continue;
                     return htmlEl;
                 }
