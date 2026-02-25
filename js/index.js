@@ -17,7 +17,7 @@ const CONFIG = {
     DEFAULT_POS: { left: 60, top: 60 },
 };
 /**
- * ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ (UTILS)
+ * ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ
  */
 class Utils {
     /**
@@ -59,12 +59,13 @@ class Utils {
         return {
             name: el.querySelector('.function-name')?.textContent?.trim() || 'Блок',
             description: el.querySelector('.function-desc')?.textContent?.trim() || '',
-            category: this.getCategory(el)
+            category: this.getCategory(el),
+            shape: el.dataset.shape || 'square'
         };
     }
 }
 /**
- * КЛАССЫ БЛОКОВ (ООП АРХИТЕКТУРА)
+ * КЛАССЫ БЛОКОВ
  */
 /**
  * Абстрактный класс, описывающий общее поведение всех блоков в системе.
@@ -86,7 +87,7 @@ class BaseBlock {
      */
     render() {
         const item = document.createElement('div');
-        item.className = `workspace-item ${this.data.category}-item`;
+        item.className = `workspace-item ${this.data.category}-item shape-${this.data.shape}`;
         item.dataset.category = this.data.category;
         // Магия: привязываем объект класса прямо к DOM-элементу для легкого доступа
         item.blockInstance = this;
@@ -118,7 +119,7 @@ class BaseBlock {
     }
 }
 /**
- * КОРНЕВОЙ БЛОК (Root)
+ * КОРНЕВОЙ БЛОК
  * Пример: блок "Начало". Имеет слот, но сам не может быть никуда вставлен.
  */
 class RootBlock extends BaseBlock {
@@ -127,8 +128,9 @@ class RootBlock extends BaseBlock {
         return '<div class="block-slot"></div>';
     }
     /** Позволяет вставлять в себя любые блоки */
-    canAccept(childCategory) {
-        return true;
+    canAccept(childCategory, childShape) {
+        // Принимает только блоки ТАКОЙ ЖЕ ФОРМЫ
+        return this.data.shape === childShape;
     }
     /** ЗАПРЕЩАЕТ вставлять себя в другие блоки */
     isMovableToSlot() {
@@ -145,8 +147,9 @@ class ContainerBlock extends BaseBlock {
         return '<div class="block-slot"></div>';
     }
     /** Разрешает вложенность любых категорий */
-    canAccept(childCategory) {
-        return true;
+    canAccept(childCategory, childShape) {
+        // Принимает только блоки ТАКОЙ ЖЕ ФОРМЫ
+        return this.data.shape === childShape;
     }
     /** РАЗРЕШАЕТ вставлять себя в другие блоки */
     isMovableToSlot() {
@@ -170,7 +173,7 @@ class SimpleBlock extends BaseBlock {
     }
 }
 /**
- * КЛАСС РАБОЧАЯ ОБЛАСТЬ (WORKSPACE)
+ * КЛАСС РАБОЧАЯ ОБЛАСТЬ
  * Сердце системы: управляет логикой перетаскивания и физического расположения блоков.
  */
 class Workspace {
@@ -304,8 +307,8 @@ class Workspace {
                 const parentItem = htmlEl.closest('.workspace-item');
                 const parentInstance = parentItem?.blockInstance;
                 // Проверяем правила фильтрации: принимает ли контейнер эту категорию?
-                if (parentInstance && parentInstance.canAccept(this.activeBlock.data.category)) {
-                    // Защита от вставки блока внутрь самого себя
+                // Передаем форму активного блока для проверки
+                if (parentInstance && parentInstance.canAccept(this.activeBlock.data.category, this.activeBlock.data.shape)) {
                     if (this.activeBlock.element.contains(htmlEl))
                         continue;
                     return htmlEl;
@@ -400,7 +403,7 @@ class Workspace {
     }
 }
 /**
- * КЛАСС МЕНЮ (SLIDING MENU)
+ * КЛАСС МЕНЮ
  * Отвечает за интерфейс выбора блоков (аккордеон/выпадающее меню).
  */
 class SlidingMenu {
