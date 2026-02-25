@@ -252,3 +252,36 @@ header {
 .dragging {
     opacity: 0.5;
 }
+
+/* Формы блоков */
+
+/* 1. Квадратная форма (Стандартная) */
+.shape-square {
+    border-radius: 4px !important;
+}
+.shape-square .block-slot {
+    border-radius: 2px;
+}
+
+/* 2. Круглая форма (Для значений и вычислений) */
+.shape-round {
+    border-radius: 30px !important;
+    padding: 12px 24px; /* Чуть больше отступ для красоты */
+}
+.shape-round .block-slot {
+    border-radius: 20px;
+}
+
+/* 3. Ромбовидная/Скошенная форма (Для логики/сравнений) */
+.shape-diamond {
+    border-radius: 20px 0 20px 0 !important;
+}
+.shape-diamond .block-slot {
+    border-radius: 10px 0 10px 0;
+}
+
+/* Изменяем цвет подсветки слота, чтобы было понятнее */
+.block-slot.drag-over {
+    background-color: rgba(0, 255, 0, 0.2);
+    border: 2px dashed #000;
+}
