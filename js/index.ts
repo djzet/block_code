@@ -1,62 +1,315 @@
-/**
- * ТИПЫ И ИНТЕРФЕЙСЫ
- */
-
-/** Допустимые категории блоков для группировки и стилизации */
 type Category = 'starts' | 'operator' | 'variable' | 'event';
 
-/** Данные, необходимые для инициализации нового блока */
 interface ItemData {
-    name: string;        // Отображаемое имя блока
-    description: string; // Краткое описание функционала
-    category: Category;  // Категория (влияет на цвет и правила вложенности)
-    shape: string;       // Свойство формы
+    name: string;
+    description: string;
+    category: Category;
+    shape: string;
 }
 
-/**
- * ГЛОБАЛЬНЫЕ НАСТРОЙКИ
- */
 const CONFIG = {
-    /** Соответствие категорий ID-селекторам в HTML-меню */
     SELECTORS: {
         starts: '#category-starts',
         operator: '#category-operators',
         variable: '#category-variables',
         event: '#category-events'
     } as Record<Category, string>,
-    /** Начальное положение нового блока при создании */
     DEFAULT_POS: { left: 60, top: 60 },
 };
 
-/**
- * ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ
- */
+class Environment {
+    public vars: Record<string, number> = {};
+    public arrays: Record<string, number[]> = {};
+
+    /**
+     * Вычисляет математическое или логическое выражение с помощью безопасного парсера.
+     */
+    public evaluate(expr: string): any {
+        if (!expr.trim()) return 0;
+        const parser = new ExpressionParser(this);
+        return parser.evaluate(expr);
+    }
+}
+
+class ExpressionParser {
+    private pos = 0;
+    private tokens: string[] = [];
+    private env: Environment;
+
+    /**
+     * Инициализирует парсер выражений с переданным окружением переменных.
+     */
+    constructor(env: Environment) {
+        this.env = env;
+    }
+
+    /**
+     * Выполняет лексический анализ и вычисляет переданное выражение.
+     */
+    public evaluate(expr: string): any {
+        const tokenRegex = /==|!=|<=|>=|AND|OR|NOT|[a-zA-Z_]\w*|\d+|[+\-*/%()[\]<>]/gi;
+        this.tokens = expr.match(tokenRegex) || [];
+        this.pos = 0;
+
+        if (this.tokens.length === 0) return 0;
+
+        const result = this.parseOr();
+
+        if (this.pos < this.tokens.length) {
+            throw new Error(`Синтаксическая ошибка: лишний токен '${this.tokens[this.pos]}'`);
+        }
+        return result;
+    }
+
+    /**
+     * Возвращает текущий токен в верхнем регистре без смещения указателя.
+     */
+    private peek(): string | undefined {
+        return this.tokens[this.pos]?.toUpperCase();
+    }
+
+    /**
+     * Возвращает текущий токен в оригинальном регистре без смещения указателя.
+     */
+    private peekRaw(): string | undefined {
+        return this.tokens[this.pos];
+    }
+
+    /**
+     * Возвращает текущий токен и сдвигает указатель на следующий элемент.
+     */
+    private consume(): string {
+        return this.tokens[this.pos++];
+    }
+
+    /**
+     * Обрабатывает операции логического ИЛИ (OR).
+     */
+    private parseOr(): any {
+        let left = this.parseAnd();
+        while (this.peek() === 'OR') {
+            this.consume();
+            left = left || this.parseAnd();
+        }
+        return left;
+    }
+
+    /**
+     * Обрабатывает операции логического И (AND).
+     */
+    private parseAnd(): any {
+        let left = this.parseEquality();
+        while (this.peek() === 'AND') {
+            this.consume();
+            left = left && this.parseEquality();
+        }
+        return left;
+    }
+
+    /**
+     * Обрабатывает операции проверки на равенство (==, !=).
+     */
+    private parseEquality(): any {
+        let left = this.parseRelational();
+        while (this.peek() === '==' || this.peek() === '!=') {
+            let op = this.consume();
+            let right = this.parseRelational();
+            if (op === '==') left = left === right;
+            if (op === '!=') left = left !== right;
+        }
+        return left;
+    }
+
+    /**
+     * Обрабатывает операции сравнения (<, >, <=, >=).
+     */
+    private parseRelational(): any {
+        let left = this.parseAdditive();
+        while (['<', '>', '<=', '>='].includes(this.peek() || '')) {
+            let op = this.consume();
+            let right = this.parseAdditive();
+            if (op === '<') left = left < right;
+            if (op === '>') left = left > right;
+            if (op === '<=') left = left <= right;
+            if (op === '>=') left = left >= right;
+        }
+        return left;
+    }
+
+    /**
+     * Обрабатывает операции сложения и вычитания (+, -).
+     */
+    private parseAdditive(): any {
+        let left = this.parseMultiplicative();
+        while (['+', '-'].includes(this.peek() || '')) {
+            let op = this.consume();
+            let right = this.parseMultiplicative();
+            if (op === '+') left = left + right;
+            if (op === '-') left = left - right;
+        }
+        return left;
+    }
+
+    /**
+     * Обрабатывает операции умножения, деления и остатка от деления (*, /, %).
+     */
+    private parseMultiplicative(): any {
+        let left = this.parseUnary();
+        while (['*', '/', '%'].includes(this.peek() || '')) {
+            let op = this.consume();
+            let right = this.parseUnary();
+            if (op === '*') left = left * right;
+            if (op === '/') {
+                if (right === 0) throw new Error("Деление на ноль!");
+                left = Math.trunc(left / right);
+            }
+            if (op === '%') left = left % right;
+        }
+        return left;
+    }
+
+    /**
+     * Обрабатывает унарные операции (отрицательное число, логическое НЕ).
+     */
+    private parseUnary(): any {
+        if (this.peek() === '-') {
+            this.consume();
+            return -this.parsePrimary();
+        }
+        if (this.peek() === 'NOT') {
+            this.consume();
+            return !this.parsePrimary();
+        }
+        return this.parsePrimary();
+    }
+
+    /**
+     * Обрабатывает первичные выражения: числа, переменные, элементы массивов и скобки.
+     */
+    private parsePrimary(): any {
+        let tokenRaw = this.peekRaw();
+        if (!tokenRaw) throw new Error("Неожиданный конец выражения");
+
+        this.consume();
+
+        if (tokenRaw === '(') {
+            let expr = this.parseOr();
+            if (this.consume() !== ')') throw new Error("Пропущена закрывающая скобка ')'");
+            return expr;
+        }
+
+        if (/^\d+$/.test(tokenRaw)) {
+            return parseInt(tokenRaw, 10);
+        }
+
+        if (/^[a-zA-Z_]\w*$/.test(tokenRaw)) {
+            if (this.peekRaw() === '[') {
+                this.consume();
+                let index = this.parseOr();
+                if (this.consume() !== ']') throw new Error("Пропущена закрывающая скобка ']'");
+
+                if (!this.env.arrays[tokenRaw]) throw new Error(`Массив ${tokenRaw} не объявлен`);
+                if (index < 0 || index >= this.env.arrays[tokenRaw].length) {
+                    throw new Error(`Индекс вне границ массива: ${tokenRaw}[${index}]`);
+                }
+                return this.env.arrays[tokenRaw][index];
+            }
+
+            if (this.env.vars[tokenRaw] === undefined) {
+                throw new Error(`Переменная ${tokenRaw} не объявлена`);
+            }
+            return this.env.vars[tokenRaw];
+        }
+
+        throw new Error(`Недопустимый символ: ${tokenRaw}`);
+    }
+}
+
+class Interpreter {
+    static consoleEl = document.getElementById('console-output');
+
+    /**
+     * Создает асинхронную задержку на указанное количество миллисекунд.
+     */
+    static sleep(ms: number) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Выводит текстовое сообщение в окно терминала с указанным типом оформления.
+     */
+    static print(msg: string, type: 'normal' | 'system' | 'error' = 'normal') {
+        if (!this.consoleEl) return;
+        const line = document.createElement('div');
+        line.className = `console-line ${type === 'normal' ? '' : type + '-msg'}`;
+        line.textContent = `> ${msg}`;
+        this.consoleEl.appendChild(line);
+        this.consoleEl.scrollTop = this.consoleEl.scrollHeight;
+    }
+
+    /**
+     * Очищает содержимое окна терминала.
+     */
+    static clear() {
+        if (this.consoleEl) this.consoleEl.innerHTML = '';
+    }
+
+    /**
+     * Запускает выполнение программы, начиная с корневого блока рабочей области.
+     */
+    static async run(workspace: Workspace) {
+        this.clear();
+        this.print("Запуск компиляции...", "system");
+
+        workspace.clearErrors();
+
+        const rootElements = workspace.element?.querySelectorAll(':scope > .workspace-item');
+        if (!rootElements || rootElements.length === 0) {
+            this.print("Ошибка: Рабочая область пуста.", "error");
+            return;
+        }
+
+        const startBlocks: BaseBlock[] = [];
+        rootElements.forEach(el => {
+            const block = (el as any).blockInstance as BaseBlock;
+            if (block && block.data.name === 'Начало') startBlocks.push(block);
+        });
+
+        if (startBlocks.length === 0) {
+            this.print("Ошибка: Отсутствует блок 'Начало'.", "error");
+            return;
+        }
+
+        const env = new Environment();
+
+        try {
+            this.print("Исполнение...", "system");
+            await startBlocks[0].execute(env);
+            this.print("Программа успешно завершена.", "system");
+        } catch (error: any) {
+            this.print(`КРИТИЧЕСКАЯ ОШИБКА: ${error.message}`, "error");
+        }
+    }
+}
+
 class Utils {
-    /** 
-     * Находит один HTML-элемент по CSS-селектору 
-     * @param s CSS-селектор
+    /**
+     * Находит первый DOM-элемент, соответствующий заданному селектору.
      */
     static $<T extends HTMLElement>(s: string): T | null { return document.querySelector(s); }
 
-    /** 
-     * Находит все HTML-элементы по CSS-селектору 
-     * @param s CSS-селектор
+    /**
+     * Находит все DOM-элементы, соответствующие заданному селектору.
      */
     static $$<T extends HTMLElement>(s: string): NodeListOf<T> { return document.querySelectorAll(s); }
 
-    /** 
-     * Ограничивает число в пределах заданного диапазона 
-     * @param v Значение
-     * @param min Минимум
-     * @param max Максимум
+    /**
+     * Ограничивает числовое значение в заданном диапазоне.
      */
-    static clamp(v: number, min: number, max: number): number {
-        return Math.max(min, Math.min(v, max));
-    }
+    static clamp(v: number, min: number, max: number): number { return Math.max(min, Math.min(v, max)); }
 
-    /** 
-     * Определяет категорию блока, находя его родительскую секцию в меню 
-     * @param el Элемент из меню
+    /**
+     * Определяет категорию блока на основе его родительского контейнера в меню.
      */
     static getCategory(el: HTMLElement): Category {
         const entries = Object.entries(CONFIG.SELECTORS) as [Category, string][];
@@ -66,9 +319,8 @@ class Utils {
         return 'operator';
     }
 
-    /** 
-     * Извлекает данные (имя, описание) из HTML-шаблона элемента в меню 
-     * @param el Элемент из меню
+    /**
+     * Извлекает данные о блоке (имя, описание, категория, форма) из HTML-элемента.
      */
     static getItemData(el: HTMLElement): ItemData {
         return {
@@ -80,22 +332,15 @@ class Utils {
     }
 }
 
-/**
- * КЛАССЫ БЛОКОВ
- */
-
-/**
- * Абстрактный класс, описывающий общее поведение всех блоков в системе.
- */
 abstract class BaseBlock {
-    public element: HTMLDivElement; // Ссылка на DOM-элемент блока в рабочей области
-    protected workspace: Workspace; // Ссылка на управляющий класс Workspace
-    public data: ItemData;          // Данные блока (название, категория и т.д.)
+    public element: HTMLDivElement;
+    protected workspace: Workspace;
+    public data: ItemData;
+    public next: BaseBlock | null = null;
+    public previous: BaseBlock | null = null;
 
     /**
-     * Создает экземпляр блока и отрисовывает его
-     * @param data Параметры блока
-     * @param workspace Ссылка на рабочую область
+     * Инициализирует базовый блок с переданными данными и привязывает его к рабочей области.
      */
     constructor(data: ItemData, workspace: Workspace) {
         this.data = data;
@@ -104,16 +349,13 @@ abstract class BaseBlock {
         this.attachEvents();
     }
 
-    /** 
-     * Генерирует HTML-код блока и устанавливает начальные стили 
+    /**
+     * Генерирует HTML-представление блока.
      */
     protected render(): HTMLDivElement {
         const item = document.createElement('div');
-
         item.className = `workspace-item ${this.data.category}-item shape-${this.data.shape}`;
         item.dataset.category = this.data.category;
-
-        // Магия: привязываем объект класса прямо к DOM-элементу для легкого доступа
         (item as any).blockInstance = this;
 
         item.innerHTML = `
@@ -122,262 +364,608 @@ abstract class BaseBlock {
             ${this.getInnerTemplate()} 
             <button class="remove-item" title="Удалить">×</button>
         `;
-
         Object.assign(item.style, { position: 'absolute', zIndex: "10" });
         return item;
     }
 
-    /** Возвращает HTML-код внутренней части (наличие или отсутствие слота) */
+    /**
+     * Возвращает HTML-шаблон для внутреннего содержимого блока.
+     */
     protected abstract getInnerTemplate(): string;
 
-    /** 
-     * Проверяет, может ли текущий блок принять в себя другой блок 
-     * @param childCategory Категория вставляемого блока
-     * Метод проверки теперь принимает ФОРМУ дочернего блока
+    /**
+     * Проверяет, может ли блок принять дочерний элемент указанной категории и формы.
      */
     public abstract canAccept(childCategory: Category, childShape: string): boolean;
 
-    /** 
-     * Указывает, разрешено ли этот блок вставлять внутрь других блоков 
+    /**
+     * Определяет, разрешено ли вкладывать данный блок внутрь других слотов.
      */
     public abstract isMovableToSlot(): boolean;
 
-    /** 
-     * Назначает события удаления и начала перетаскивания (MouseDown) 
+    /**
+     * Привязывает события удаления и начала перетаскивания к элементу блока.
      */
     private attachEvents(): void {
         this.element.querySelector('.remove-item')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.destroy();
         });
-        // Передаем управление перетаскиванием классу Workspace
-        this.element.onmousedown = (e) => this.workspace.dragStart(e, this);
-        this.element.ondragstart = (e) => e.preventDefault(); // Отключаем стандартный Drag браузера
+        this.element.onmousedown = (e) => {
+            if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                this.workspace.dragStart(e, this);
+            }
+        };
+        this.element.ondragstart = (e) => {
+            if ((e.target as HTMLElement).tagName !== 'INPUT') e.preventDefault();
+        };
     }
 
-    /** Удаляет блок из DOM и проверяет пустоту рабочей области */
+    /**
+     * Вставляет переданный блок после текущего в двусвязном списке.
+     */
+    public insertAfter(block: BaseBlock): void {
+        block.next = this.next;
+        if (this.next) this.next.previous = block;
+        this.next = block;
+        block.previous = this;
+    }
+
+    /**
+     * Исключает текущий блок из двусвязного списка, соединяя соседей.
+     */
+    public removeFromList(): void {
+        if (this.previous) this.previous.next = this.next;
+        if (this.next) this.next.previous = this.previous;
+        this.next = null;
+        this.previous = null;
+    }
+
+    /**
+     * Выполняет блок с визуальной подсветкой и рекурсивно передает управление следующему блоку.
+     */
+    public async execute(env: Environment): Promise<any> {
+        this.element.style.boxShadow = "0 0 10px 3px yellow";
+        await Interpreter.sleep(300);
+
+        try {
+            await this.runAction(env);
+            this.element.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+        } catch (error: any) {
+            this.element.classList.add('error-highlight');
+            this.element.style.boxShadow = "";
+            throw error;
+        }
+
+        if (this.next) {
+            await this.next.execute(env);
+        }
+    }
+
+    /**
+     * Выполняет специфичную для типа блока логику.
+     */
+    protected abstract runAction(env: Environment): Promise<any>;
+
+    /**
+     * Запускает последовательность блоков, вложенных в указанный внутренний слот.
+     */
+    protected async runInnerSlot(env: Environment, slotSelector: string = '.block-slot'): Promise<void> {
+        const slot = this.element.querySelector(`:scope > ${slotSelector}`);
+        const firstChildEl = slot?.querySelector(':scope > .workspace-item');
+        if (firstChildEl) {
+            const firstChildBlock = (firstChildEl as any).blockInstance as BaseBlock;
+            await firstChildBlock.execute(env);
+        }
+    }
+
+    /**
+     * Уничтожает блок, удаляя его из DOM и синхронизируя список рабочей области.
+     */
     public destroy(): void {
+        this.removeFromList();
         this.element.remove();
+        this.workspace.syncLinkedLists();
         this.workspace.checkEmpty();
     }
 }
 
-/**
- * КОРНЕВОЙ БЛОК
- * Пример: блок "Начало". Имеет слот, но сам не может быть никуда вставлен.
- */
 class RootBlock extends BaseBlock {
-    /** Создает видимый слот для вложенности */
+    /**
+     * Возвращает шаблон внутреннего слота для корневого блока.
+     */
+    protected getInnerTemplate(): string { return '<div class="block-slot" data-label="Тело программы"></div>'; }
+
+    /**
+     * Разрешает принятие элементов любой категории и формы.
+     */
+    public canAccept(childCategory: Category, childShape: string): boolean { return true; }
+
+    /**
+     * Запрещает вложение корневого блока в другие слоты.
+     */
+    public isMovableToSlot(): boolean { return false; }
+
+    /**
+     * Инициализирует выполнение вложенных блоков.
+     */
+    protected async runAction(env: Environment): Promise<any> {
+        Interpreter.print(`[Старт] Инициализация...`);
+        await this.runInnerSlot(env);
+    }
+
+    /**
+     * Намеренно убираем вызов соседних блоков (this.next), чтобы код, 
+     * висящий снаружи (под блоком Начало), игнорировался и не запускался.
+     */
+    public async execute(env: Environment): Promise<any> {
+        this.element.style.boxShadow = "0 0 10px 3px yellow";
+        await Interpreter.sleep(300);
+
+        try {
+            await this.runAction(env);
+            this.element.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+        } catch (error: any) {
+            this.element.classList.add('error-highlight');
+            this.element.style.boxShadow = "";
+            throw error;
+        }
+    }
+}
+
+class VarDeclBlock extends BaseBlock {
+    /**
+     * Возвращает шаблон ввода для объявления переменных.
+     */
+    protected getInnerTemplate(): string { return '<input class="block-input" placeholder="x, y, result" title="Через запятую" />'; }
+
+    /**
+     * Запрещает принятие дочерних элементов.
+     */
+    public canAccept(): boolean { return false; }
+
+    /**
+     * Разрешает перемещение блока в слоты.
+     */
+    public isMovableToSlot(): boolean { return true; }
+
+    /**
+     * Объявляет целочисленные переменные в текущем окружении.
+     */
+    protected async runAction(env: Environment): Promise<any> {
+        const val = this.element.querySelector('input')?.value || '';
+        const names = val.split(',').map(s => s.trim()).filter(s => s);
+        if (names.length === 0) throw new Error("Не указаны имена переменных");
+
+        for (let name of names) {
+            if (!/^[a-zA-Z_]\w*$/.test(name)) throw new Error(`Недопустимое имя переменной: ${name}`);
+            env.vars[name] = 0;
+        }
+        Interpreter.print(`Объявлены переменные: ${names.join(', ')}`);
+    }
+}
+
+class ArrayDeclBlock extends BaseBlock {
+    /**
+     * Возвращает шаблон ввода для объявления массива и его размера.
+     */
     protected getInnerTemplate(): string {
-        return '<div class="block-slot"></div>';
+        return `<div class="input-row">
+                    <input class="block-input" placeholder="arr" style="width: 50%" title="Имя массива"/>[
+                    <input class="block-input" placeholder="10" style="width: 40%" title="Размер"/> ]
+                </div>`;
     }
 
-    /** Позволяет вставлять в себя любые блоки */
-    public canAccept(childCategory: Category, childShape: string): boolean {
-        // Принимает только блоки ТАКОЙ ЖЕ ФОРМЫ
-        return this.data.shape === childShape;
-    }
+    /**
+     * Запрещает принятие дочерних элементов.
+     */
+    public canAccept(): boolean { return false; }
 
-    /** ЗАПРЕЩАЕТ вставлять себя в другие блоки */
-    public isMovableToSlot(): boolean {
-        return false;
+    /**
+     * Разрешает перемещение блока в слоты.
+     */
+    public isMovableToSlot(): boolean { return true; }
+
+    /**
+     * Создает статический массив в текущем окружении на основе вычисленного размера.
+     */
+    protected async runAction(env: Environment): Promise<any> {
+        const inputs = this.element.querySelectorAll('input');
+        const name = inputs[0].value.trim();
+        const sizeExpr = inputs[1].value.trim();
+
+        if (!/^[a-zA-Z_]\w*$/.test(name)) throw new Error(`Недопустимое имя массива: ${name}`);
+
+        const size = env.evaluate(sizeExpr);
+        if (size <= 0) throw new Error(`Размер массива должен быть > 0`);
+
+        env.arrays[name] = new Array(size).fill(0);
+        Interpreter.print(`Объявлен массив: ${name}[${size}]`);
     }
 }
 
-/**
- * БЛОК-КОНТЕЙНЕР
- * Пример: блок "Цикл". Имеет слот и сам может быть вложен в другой контейнер.
- */
-class ContainerBlock extends BaseBlock {
-    /** Создает видимый слот для вложенности */
+class AssignBlock extends BaseBlock {
+    /**
+     * Возвращает шаблон ввода для оператора присваивания.
+     */
     protected getInnerTemplate(): string {
-        return '<div class="block-slot"></div>';
+        return `<div class="input-row">
+                    <input class="block-input assign-left" placeholder="x" style="width: 40%"/> =
+                    <input class="block-input assign-right" placeholder="a + 5" style="width: 55%"/>
+                </div>`;
     }
 
-    /** Разрешает вложенность любых категорий */
-    public canAccept(childCategory: Category, childShape: string): boolean {
-        // Принимает только блоки ТАКОЙ ЖЕ ФОРМЫ
-        return this.data.shape === childShape;
-    }
+    /**
+     * Запрещает принятие дочерних элементов.
+     */
+    public canAccept(): boolean { return false; }
 
-    /** РАЗРЕШАЕТ вставлять себя в другие блоки */
-    public isMovableToSlot(): boolean {
-        return true;
+    /**
+     * Разрешает перемещение блока в слоты.
+     */
+    public isMovableToSlot(): boolean { return true; }
+
+    /**
+     * Вычисляет выражение правой части и сохраняет результат в переменную или элемент массива левой части.
+     */
+    protected async runAction(env: Environment): Promise<any> {
+        const left = this.element.querySelector('.assign-left') as HTMLInputElement;
+        const right = this.element.querySelector('.assign-right') as HTMLInputElement;
+        const leftVal = left.value.trim();
+        const rightVal = right.value.trim();
+
+        if (!leftVal || !rightVal) throw new Error("Пустое поле присваивания");
+
+        const result = env.evaluate(rightVal);
+
+        const arrMatch = leftVal.match(/^([a-zA-Z_]\w*)\[(.+)\]$/);
+        if (arrMatch) {
+            const arrName = arrMatch[1];
+            const index = env.evaluate(arrMatch[2]);
+            if (!env.arrays[arrName]) throw new Error(`Массив ${arrName} не существует`);
+            if (index < 0 || index >= env.arrays[arrName].length) throw new Error(`Индекс ${index} вне границ ${arrName}`);
+            env.arrays[arrName][index] = result;
+            Interpreter.print(`${arrName}[${index}] = ${result}`);
+        } else {
+            if (env.vars[leftVal] === undefined) throw new Error(`Переменная ${leftVal} не объявлена`);
+            env.vars[leftVal] = result;
+            Interpreter.print(`${leftVal} = ${result}`);
+        }
     }
 }
 
-/**
- * ПРОСТОЙ БЛОК
- * Пример: "Переменная". Не имеет слота, но может быть вложен в контейнер.
- */
-class SimpleBlock extends BaseBlock {
-    /** У простого блока нет внутреннего слота */
-    protected getInnerTemplate(): string { return ''; }
-
-    /** Всегда возвращает false, так как в него нельзя ничего вставить */
-    public canAccept(childCategory: Category): boolean {
-        return false;
+class IfBlock extends BaseBlock {
+    /**
+     * Возвращает шаблон ввода условия и слот для выполнения логики.
+     */
+    protected getInnerTemplate(): string {
+        return `Условие: <input class="block-input" placeholder="x > 5" />
+                <div class="block-slot" data-label="Тогда"></div>`;
     }
 
-    /** РАЗРЕШАЕТ вставлять себя в другие блоки */
-    public isMovableToSlot(): boolean {
-        return true;
+    /**
+     * Разрешает принятие дочерних элементов любой формы.
+     */
+    public canAccept(): boolean { return true; }
+
+    /**
+     * Разрешает перемещение блока в слоты.
+     */
+    public isMovableToSlot(): boolean { return true; }
+
+    /**
+     * Оценивает условие и выполняет вложенные блоки, если условие истинно.
+     */
+    protected async runAction(env: Environment): Promise<any> {
+        const cond = this.element.querySelector('input')?.value.trim();
+        if (!cond) throw new Error("Пустое условие в If");
+
+        const isTrue = env.evaluate(cond);
+        Interpreter.print(`[Если] Условие (${cond}) -> ${isTrue}`);
+
+        if (isTrue) {
+            await this.runInnerSlot(env);
+        }
     }
 }
 
-/**
- * КЛАСС РАБОЧАЯ ОБЛАСТЬ
- * Сердце системы: управляет логикой перетаскивания и физического расположения блоков.
- */
+class IfElseBlock extends BaseBlock {
+    /**
+     * Возвращает шаблон ввода условия и два слота: для истинного и ложного результата.
+     */
+    protected getInnerTemplate(): string {
+        return `Условие: <input class="block-input" placeholder="x == y" />
+                <div class="block-slot slot-true" data-label="Тогда"></div>
+                <div class="block-slot slot-false" data-label="Иначе"></div>`;
+    }
+
+    /**
+     * Разрешает принятие дочерних элементов любой формы.
+     */
+    public canAccept(): boolean { return true; }
+
+    /**
+     * Разрешает перемещение блока в слоты.
+     */
+    public isMovableToSlot(): boolean { return true; }
+
+    /**
+     * Оценивает условие и направляет выполнение в соответствующий внутренний слот.
+     */
+    protected async runAction(env: Environment): Promise<any> {
+        const cond = this.element.querySelector('input')?.value.trim();
+        if (!cond) throw new Error("Пустое условие в If-Else");
+
+        const isTrue = env.evaluate(cond);
+        Interpreter.print(`[Если-Иначе] Условие (${cond}) -> ${isTrue}`);
+
+        if (isTrue) {
+            await this.runInnerSlot(env, '.slot-true');
+        } else {
+            await this.runInnerSlot(env, '.slot-false');
+        }
+    }
+}
+
+class WhileBlock extends BaseBlock {
+    /**
+     * Возвращает шаблон ввода условия и слот для циклично выполняемых блоков.
+     */
+    protected getInnerTemplate(): string {
+        return `Условие: <input class="block-input" placeholder="i < 10" />
+                <div class="block-slot" data-label="Повторять"></div>`;
+    }
+
+    /**
+     * Разрешает принятие дочерних элементов любой формы.
+     */
+    public canAccept(): boolean { return true; }
+
+    /**
+     * Разрешает перемещение блока в слоты.
+     */
+    public isMovableToSlot(): boolean { return true; }
+
+    /**
+     * Циклично выполняет внутренний слот, пока условие истинно (имеет лимит итераций).
+     */
+    protected async runAction(env: Environment): Promise<any> {
+        const input = this.element.querySelector('input');
+        let iterations = 0;
+        const MAX_ITERATIONS = 1000;
+
+        while (true) {
+            const cond = input?.value.trim();
+            if (!cond) throw new Error("Пустое условие в While");
+
+            const isTrue = env.evaluate(cond);
+            if (!isTrue) {
+                Interpreter.print(`[Пока] Завершен`);
+                break;
+            }
+
+            iterations++;
+            if (iterations > MAX_ITERATIONS) throw new Error(`Защита от зависания: превышен лимит (${MAX_ITERATIONS})`);
+
+            Interpreter.print(`[Пока] Итерация ${iterations}`);
+            await this.runInnerSlot(env);
+        }
+    }
+}
+
+class PrintBlock extends BaseBlock {
+    protected getInnerTemplate(): string {
+        return `<input class="block-input" placeholder="x, y, z," />`;
+    }
+
+    /**
+     * Запрещает принятие дочерних элементов любой формы.
+     */
+    public canAccept(): boolean { return false; }
+
+    /**
+    * Разрешает перемещение блока в слоты.
+    */
+    public isMovableToSlot(): boolean { return true; }
+
+    /**
+    * Вычисляет и выводит в терминал значения, указанные в поле ввода, разделенные запятыми.
+    */
+    protected async runAction(env: Environment): Promise<any> {
+        const input = this.element.querySelector('input') as HTMLInputElement;
+        const text = input?.value?.trim();
+
+        if (!text) {
+            throw new Error("Поле вывода пустое");
+        }
+
+        // Разбиваем по запятым, но только те, что НЕ внутри кавычек
+        const parts = text.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.trim());
+
+        const values = parts.map(part => {
+            if (!part) return "";
+
+            // Если строка в кавычках — сразу берём содержимое
+            if ((part.startsWith('"') && part.endsWith('"')) ||
+                (part.startsWith("'") && part.endsWith("'"))) {
+                return part.slice(1, -1);
+            }
+
+            // Иначе пытаемся вычислить как выражение
+            try {
+                return env.evaluate(part);
+            } catch {
+                // Если не получилось — выводим как обычный текст
+                return part;
+            }
+        });
+
+        const output = values.map(v => String(v)).join(" ");
+        Interpreter.print(output);
+    }
+}
+
 class Workspace {
-    /** Основной HTML-контейнер области */
     public element = Utils.$<HTMLDivElement>('#workspace');
-    /** Блок, который перемещается в данный момент */
     private activeBlock: BaseBlock | null = null;
-    /** Разница координат между курсором и верхним левым углом блока */
     private offset = { x: 0, y: 0 };
 
-    /** Инициализирует рабочую область */
+    /**
+     * Инициализирует рабочую область: настраивает drag-and-drop и обработчик изменения размера окна.
+     */
     public init(): void {
         if (!this.element) return;
         this.setupDrop();
         this.checkEmpty();
-        // Адаптация координат при изменении размера окна
         window.addEventListener('resize', () => this.updatePositions());
     }
 
-    /** 
-     * Фабричный метод: создает правильный объект класса на основе данных блока 
-     * @param data Информация о блоке
+    /**
+     * Удаляет классы визуального выделения ошибок со всех блоков в рабочей области.
      */
-    public createBlock(data: ItemData): BaseBlock {
-        // Логика определения типа блока по его имени или категории
-        if (data.name === 'Начало') {
-            return new RootBlock(data, this);
-        }
-
-        if (data.category === 'starts' || data.category === 'operator') {
-            return new ContainerBlock(data, this);
-        }
-
-        return new SimpleBlock(data, this);
+    public clearErrors(): void {
+        Utils.$$('.error-highlight').forEach(el => el.classList.remove('error-highlight'));
     }
 
-    /** 
-     * Вызывается при нажатии на блок для начала перемещения 
-     * @param e MouseEvent
-     * @param block Экземпляр блока
+    /**
+     * Создает экземпляр соответствующего класса блока на основе переданных данных.
+     */
+    public createBlock(data: ItemData): BaseBlock {
+        switch (data.name) {
+            case 'Начало': return new RootBlock(data, this);
+            case 'Переменная': return new VarDeclBlock(data, this);
+            case 'Массив': return new ArrayDeclBlock(data, this);
+            case 'Присвоить': return new AssignBlock(data, this);
+            case 'Если': return new IfBlock(data, this);
+            case 'Если-Иначе': return new IfElseBlock(data, this);
+            case 'Пока': return new WhileBlock(data, this);
+            case 'Вывести': return new PrintBlock(data, this);
+            default: throw new Error(`Неизвестный тип блока: ${data.name}`);
+        }
+    }
+
+    /**
+     * Начинает процесс перетаскивания блока, вычисляет его начальное смещение и исправляет ширину при вытаскивании из слота.
      */
     public dragStart(e: MouseEvent, block: BaseBlock): void {
-        if ((e.target as HTMLElement).closest('.remove-item')) return;
-        e.preventDefault();
-        e.stopPropagation();
+        if ((e.target as HTMLElement).closest('.remove-item') || (e.target as HTMLElement).tagName === 'INPUT') return;
+        e.preventDefault(); e.stopPropagation();
 
         const item = block.element;
-        const rect = item.getBoundingClientRect();
+        let rect = item.getBoundingClientRect();
 
-        // Если блок вытаскивают из слота (родителя)
+        // Если вытаскиваем блок из слота
         if (item.parentElement?.classList.contains('block-slot')) {
             const wsRect = this.element!.getBoundingClientRect();
-            this.element!.appendChild(item); // Возвращаем блок в корень рабочей области
+            this.element!.appendChild(item);
+
             item.style.position = 'absolute';
-            // Корректируем координаты, чтобы блок не прыгал при смене родителя
-            item.style.left = `${rect.left - wsRect.left}px`;
-            item.style.top = `${rect.top - wsRect.top}px`;
+            item.style.width = '';
+
+            item.style.left = `${rect.left - wsRect.left + this.element!.scrollLeft}px`;
+            item.style.top = `${rect.top - wsRect.top + this.element!.scrollTop}px`;
+
+            rect = item.getBoundingClientRect();
         }
 
         this.activeBlock = block;
-        this.offset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+        let offsetX = e.clientX - rect.left;
+        if (offsetX > rect.width) offsetX = rect.width / 2;
+
+        this.offset = { x: offsetX, y: e.clientY - rect.top };
 
         item.classList.add('dragging');
         item.style.zIndex = "1000";
 
-        // Слушатели на весь документ для плавного движения
-        const onMove = (ev: MouseEvent) => this.dragging(ev);
-        const onUp = () => this.dragEnd();
-
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp, { once: true });
+        document.addEventListener('mousemove', this.onMove);
+        document.addEventListener('mouseup', this.onUp, { once: true });
     }
 
-    /** 
-     * Рассчитывает новые координаты блока при движении мыши 
-     * @param e MouseEvent
+    private onMove = (e: MouseEvent) => this.dragging(e);
+    private onUp = () => this.dragEnd();
+
+    /**
+     * Обновляет позицию перемещаемого блока относительно курсора и подсвечивает слоты для вставки.
      */
     private dragging(e: MouseEvent): void {
         if (!this.activeBlock || !this.element) return;
-
         const wsRect = this.element.getBoundingClientRect();
-        let x = e.clientX - this.offset.x - wsRect.left;
-        let y = e.clientY - this.offset.y - wsRect.top;
 
-        // Не даем блоку выйти за пределы рабочей области
-        x = Utils.clamp(x, 0, wsRect.width - this.activeBlock.element.offsetWidth);
-        y = Utils.clamp(y, 0, wsRect.height - this.activeBlock.element.offsetHeight);
+        let x = e.clientX - this.offset.x - wsRect.left + this.element.scrollLeft;
+        let y = e.clientY - this.offset.y - wsRect.top + this.element.scrollTop;
+
+        x = Math.max(0, x);
+        y = Math.max(0, y);
 
         this.activeBlock.element.style.left = `${x}px`;
         this.activeBlock.element.style.top = `${y}px`;
 
         this.clearHighlights();
-
-        // Подсвечиваем слот, если блок находится над ним
         const targetSlot = this.findValidSlot(e.clientX, e.clientY);
         if (targetSlot) targetSlot.classList.add('drag-over');
     }
 
-    /** 
-     * Завершает перетаскивание и решает, вставить ли блок в слот или оставить на поле 
+    /**
+     * Завершает перетаскивание блока, закрепляя его в слоте или на рабочей области, обновляя связи списка.
      */
     private dragEnd(): void {
         if (!this.activeBlock) return;
+        document.removeEventListener('mousemove', this.onMove);
 
         const rect = this.activeBlock.element.getBoundingClientRect();
-        // Точка проверки (центр верха блока)
         const slot = this.findValidSlot(rect.left + rect.width / 2, rect.top + 10);
 
         if (slot) {
-            // Ищем место внутри слота (между какими блоками вставить)
             const afterEl = this.getInsertAfter(slot, rect.top + 10);
-            if (afterEl) {
-                slot.insertBefore(this.activeBlock.element, afterEl);
-            } else {
-                slot.appendChild(this.activeBlock.element);
-            }
-            // Меняем позиционирование на относительное для потока внутри слота
-            Object.assign(this.activeBlock.element.style, { position: 'relative', left: '0', top: '0' });
+            if (afterEl) slot.insertBefore(this.activeBlock.element, afterEl);
+            else slot.appendChild(this.activeBlock.element);
+
+            Object.assign(this.activeBlock.element.style, { position: 'relative', left: '0', top: '0', width: '100%' });
+        } else {
+            this.activeBlock.element.style.width = ''; // Гарантируем сброс ширины, если бросили не в слот
         }
 
         this.activeBlock.element.style.zIndex = "10";
         this.activeBlock.element.classList.remove('dragging');
         this.activeBlock = null;
         this.clearHighlights();
-        this.updateDataPercents(); // Сохраняем % координаты для адаптивности
+        this.updateDataPercents();
+
+        this.syncLinkedLists();
     }
 
-    /** 
-     * Ищет подходящий слот в указанных координатах экрана 
-     * @param x Координата X
-     * @param y Координата Y
+    /**
+     * Синхронизирует связи next/previous у всех блоков на основе их порядка в DOM-дереве.
+     */
+    public syncLinkedLists(): void {
+        const containers = [this.element, ...Array.from(document.querySelectorAll('.block-slot'))];
+
+        containers.forEach(container => {
+            if (!container) return;
+            const childBlocks = Array.from(container.querySelectorAll(':scope > .workspace-item:not(.dragging)'))
+                .map(el => (el as any).blockInstance as BaseBlock)
+                .filter(b => b);
+
+            for (let i = 0; i < childBlocks.length; i++) {
+                const block = childBlocks[i];
+                block.previous = null;
+                block.next = null;
+                if (i > 0) childBlocks[i - 1].insertAfter(block);
+            }
+        });
+    }
+
+    /**
+     * Ищет допустимый для вставки слот под курсором.
      */
     private findValidSlot(x: number, y: number): HTMLElement | null {
-        if (!this.activeBlock) return null;
-
-        // Если блок сам по себе "корневой" (Root), он не может попасть в слот
-        if (!this.activeBlock.isMovableToSlot()) {
-            return null;
-        }
-
+        if (!this.activeBlock || !this.activeBlock.isMovableToSlot()) return null;
         const targets = document.elementsFromPoint(x, y);
         for (const el of targets) {
             const htmlEl = el as HTMLElement;
-
             if (htmlEl.classList.contains('block-slot')) {
-                // Получаем инстанс блока-владельца слота
-                const parentItem = htmlEl.closest('.workspace-item') as any;
-                const parentInstance = parentItem?.blockInstance as BaseBlock;
-
-                // Проверяем правила фильтрации: принимает ли контейнер эту категорию?
-                // Передаем форму активного блока для проверки
+                const parentInstance = (htmlEl.closest('.workspace-item') as any)?.blockInstance as BaseBlock;
                 if (parentInstance && parentInstance.canAccept(this.activeBlock.data.category, this.activeBlock.data.shape)) {
                     if (this.activeBlock.element.contains(htmlEl)) continue;
                     return htmlEl;
@@ -387,8 +975,8 @@ class Workspace {
         return null;
     }
 
-    /** 
-     * Настраивает прием блоков, перетаскиваемых из внешнего HTML-меню 
+    /**
+     * Настраивает прием блоков из меню в рабочую область через Drag and Drop API.
      */
     private setupDrop(): void {
         if (!this.element) return;
@@ -402,22 +990,21 @@ class Workspace {
             this.element!.appendChild(block.element);
 
             const wsRect = this.element!.getBoundingClientRect();
-            // Позиционируем новый блок по центру курсора
-            let x = Utils.clamp(e.clientX - wsRect.left - (block.element.offsetWidth / 2), 0, wsRect.width - block.element.offsetWidth);
-            let y = Utils.clamp(e.clientY - wsRect.top - (block.element.offsetHeight / 2), 0, wsRect.height - block.element.offsetHeight);
 
-            block.element.style.left = `${x}px`;
-            block.element.style.top = `${y}px`;
+            let x = e.clientX - wsRect.left - (block.element.offsetWidth / 2) + this.element!.scrollLeft;
+            let y = e.clientY - wsRect.top - (block.element.offsetHeight / 2) + this.element!.scrollTop;
+
+            block.element.style.left = `${Math.max(0, x)}px`;
+            block.element.style.top = `${Math.max(0, y)}px`;
 
             this.updateDataPercents();
+            this.syncLinkedLists();
             Utils.$('.workspace-placeholder')?.remove();
         };
     }
 
-    /** 
-     * Определяет, перед каким элементом в слоте нужно сделать вставку 
-     * @param slot Элемент слота
-     * @param y Текущая координата Y курсора
+    /**
+     * Определяет элемент внутри слота, после которого нужно вставить текущий блок.
      */
     private getInsertAfter(slot: HTMLElement, y: number): HTMLElement | null {
         const elements = [...slot.querySelectorAll(':scope > .workspace-item:not(.dragging)')] as HTMLElement[];
@@ -428,13 +1015,13 @@ class Workspace {
         }, { offset: Number.NEGATIVE_INFINITY, element: null as HTMLElement | null }).element;
     }
 
-    /** Убирает подсветку со всех потенциальных мест вставки */
-    private clearHighlights(): void {
-        Utils.$$('.block-slot').forEach(s => s.classList.remove('drag-over'));
-    }
+    /**
+     * Сбрасывает визуальную подсветку у всех слотов.
+     */
+    private clearHighlights(): void { Utils.$$('.block-slot').forEach(s => s.classList.remove('drag-over')); }
 
-    /** 
-     * Сохраняет координаты блоков в процентах относительно рабочей области 
+    /**
+     * Обновляет процентные координаты блоков для адаптивности при изменении размера окна.
      */
     private updateDataPercents(): void {
         if (!this.element) return;
@@ -447,8 +1034,8 @@ class Workspace {
         });
     }
 
-    /** 
-     * Проверяет наличие блоков и рисует подсказку, если область пуста 
+    /**
+     * Проверяет наличие блоков в рабочей области и показывает плейсхолдер, если она пуста.
      */
     public checkEmpty(): void {
         if (Utils.$$('.workspace-item').length === 0 && !Utils.$('.workspace-placeholder')) {
@@ -456,14 +1043,18 @@ class Workspace {
         }
     }
 
-    /** Удаляет все блоки из рабочей области */
+    /**
+     * Очищает рабочую область и терминал от всех элементов.
+     */
     public clear(): void {
         Utils.$$('.workspace-item').forEach(el => el.remove());
+        this.syncLinkedLists();
         this.checkEmpty();
+        Interpreter.clear();
     }
 
-    /** 
-     * Пересчитывает физические координаты блоков при изменении размера экрана 
+    /**
+     * Пересчитывает физические координаты блоков при изменении размера экрана.
      */
     private updatePositions(): void {
         if (!this.element) return;
@@ -478,30 +1069,23 @@ class Workspace {
     }
 }
 
-/**
- * КЛАСС МЕНЮ
- * Отвечает за интерфейс выбора блоков (аккордеон/выпадающее меню).
- */
 class SlidingMenu {
-    private panel = Utils.$<HTMLDivElement>('.sliding'); // Контейнер меню
-    /** Навигационные кнопки категорий */
+    private panel = Utils.$<HTMLDivElement>('.sliding');
     private buttons: Record<string, HTMLElement | null> = {
         starts: Utils.$('#button-tag-starts'),
-        operators: Utils.$('#button-tag-operators'),
         variables: Utils.$('#button-tag-variables'),
-        events: Utils.$('#button-tag-events')
+        operators: Utils.$('#button-tag-operators')
     };
-    /** Контейнеры самих списков блоков */
     private cats: Record<string, HTMLElement | null> = {
         starts: Utils.$('#category-starts'),
-        operators: Utils.$('#category-operators'),
         variables: Utils.$('#category-variables'),
-        events: Utils.$('#category-events')
+        operators: Utils.$('#category-operators')
     };
-    /** Текущая активная кнопка в меню */
     private activeBtn: HTMLElement | null = null;
 
-    /** Инициализирует функционал меню */
+    /**
+     * Инициализирует логику переключения меню и настройки перетаскивания элементов меню.
+     */
     public init(): void {
         this.setupDraggable();
         Object.entries(this.buttons).forEach(([key, btn]) => {
@@ -510,29 +1094,25 @@ class SlidingMenu {
                 this.toggle(btn, this.cats[key]);
             });
         });
-        this.observeChanges(); // Поддержка динамического добавления элементов
+        this.observeChanges();
     }
 
-    /** Делает элементы в меню доступными для перетаскивания (HTML5 Drag) */
+    /**
+     * Настраивает возможность перетаскивания (Drag API) для блоков внутри меню.
+     */
     private setupDraggable(): void {
         Utils.$$<HTMLDivElement>('.function-item').forEach(item => {
             item.draggable = true;
-            item.ondragstart = (e) => {
-                // Сериализуем данные блока в строку при начале перетаскивания
-                e.dataTransfer?.setData('text/plain', JSON.stringify(Utils.getItemData(item)));
-            };
+            item.ondragstart = (e) => e.dataTransfer?.setData('text/plain', JSON.stringify(Utils.getItemData(item)));
         });
     }
 
-    /** 
-     * Переключает видимость секций меню при клике 
-     * @param btn Нажатая кнопка
-     * @param cat Секция для отображения
+    /**
+     * Переключает видимость секций меню при клике по кнопкам категорий.
      */
     private toggle(btn: HTMLElement, cat: HTMLElement | null): void {
-        if (this.activeBtn === btn) {
-            this.hide();
-        } else {
+        if (this.activeBtn === btn) this.hide();
+        else {
             this.hide();
             if (cat) {
                 cat.classList.add('active');
@@ -542,15 +1122,17 @@ class SlidingMenu {
         }
     }
 
-    /** Скрывает все открытые панели меню */
+    /**
+     * Скрывает выпадающее меню со всеми категориями.
+     */
     public hide(): void {
         this.panel?.classList.remove('active');
         Object.values(this.cats).forEach(c => c?.classList.remove('active'));
         this.activeBtn = null;
     }
 
-    /** 
-     * Следит за изменением DOM в меню, чтобы автоматически делать новые блоки перетаскиваемыми 
+    /**
+     * Следит за добавлением новых блоков в меню для автоматической настройки их перетаскивания.
      */
     private observeChanges(): void {
         if (!this.panel) return;
@@ -558,33 +1140,31 @@ class SlidingMenu {
     }
 }
 
-/**
- * ГЛАВНЫЙ КЛАСС APP (ENTRY POINT)
- */
 class App {
     private workspace = new Workspace();
     private menu = new SlidingMenu();
 
+    /**
+     * Запускает приложение после полной загрузки дерева DOM.
+     */
     constructor() {
         document.addEventListener('DOMContentLoaded', () => this.start());
     }
 
-    /** 
-     * Точка старта приложения после загрузки страницы 
+    /**
+     * Инициализирует рабочую область, меню и глобальные слушатели событий.
      */
     private start(): void {
         this.workspace.init();
         this.menu.init();
 
-        // Событие для кнопки "Очистить всё"
         Utils.$('#clear-workspace')?.addEventListener('click', () => this.workspace.clear());
+        Utils.$('#start-workspace')?.addEventListener('click', () => Interpreter.run(this.workspace));
 
-        // Закрытие меню при клике по любому другому месту экрана
         document.addEventListener('click', (e) => {
             if (!(e.target as HTMLElement).closest('.button-tag, .sliding')) this.menu.hide();
         });
     }
 }
 
-// Запуск всего приложения
 new App();
