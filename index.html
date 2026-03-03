@@ -6,12 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Block_Code</title>
 
-  <!-- Стили -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
   <link rel="stylesheet" href="./css/style.css">
-
-  <!-- Скрипты -->
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
@@ -27,12 +24,7 @@
 
       <div class="button-tag" id="button-tag-starts">
         <div class="circle-tab circle-pink"></div>
-        <span class="text-tab">Стартовый набор</span>
-      </div>
-
-      <div class="button-tag" id="button-tag-operators">
-        <div class="circle-tab circle-red"></div>
-        <span class="text-tab">Операторы</span>
+        <span class="text-tab">Структура</span>
       </div>
 
       <div class="button-tag" id="button-tag-variables">
@@ -40,41 +32,19 @@
         <span class="text-tab">Переменные</span>
       </div>
 
-      <div class="button-tag" id="button-tag-events">
-        <div class="circle-tab circle-blue"></div>
-        <span class="text-tab">События</span>
+      <div class="button-tag" id="button-tag-operators">
+        <div class="circle-tab circle-red"></div>
+        <span class="text-tab">Логика и Циклы</span>
       </div>
     </nav>
 
-    <!-- Выпадающее меню блоков -->
     <div class="sliding">
-      <!-- Категория: Старт -->
+      <!-- Категория: Структура -->
       <section class="functions-category" id="category-starts">
         <div class="sliding-content">
-          <!-- Квадратные блоки -->
           <div class="function-item" data-shape="square">
             <div class="function-name">Начало</div>
             <div class="function-desc">Запуск программы</div>
-          </div>
-          <div class="function-item" data-shape="square">
-            <div class="function-name">Цикл</div>
-            <div class="function-desc">Повторять всегда</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Категория: Операторы -->
-      <section class="functions-category" id="category-operators">
-        <div class="sliding-content">
-          <!-- Круглый блок -->
-          <div class="function-item" data-shape="round">
-            <div class="function-name">Сложение</div>
-            <div class="function-desc">a + b</div>
-          </div>
-          <!-- Ромбовидный блок -->
-          <div class="function-item" data-shape="diamond">
-            <div class="function-name">Сравнение</div>
-            <div class="function-desc">x &gt; y</div>
           </div>
         </div>
       </section>
@@ -82,21 +52,39 @@
       <!-- Категория: Переменные -->
       <section class="functions-category" id="category-variables">
         <div class="sliding-content">
-          <!-- Круглая переменная (вставится только в Сложение) -->
-          <div class="function-item" data-shape="round">
+          <div class="function-item" data-shape="square">
             <div class="function-name">Переменная</div>
-            <div class="function-desc">создать var</div>
+            <div class="function-desc">var1, var2</div>
+          </div>
+          <div class="function-item" data-shape="square">
+            <div class="function-name">Массив</div>
+            <div class="function-desc">arr[size]</div>
+          </div>
+          <div class="function-item" data-shape="square">
+            <div class="function-name">Присвоить</div>
+            <div class="function-desc">a = b + 1</div>
           </div>
         </div>
       </section>
 
-      <!-- Категория: События -->
-      <section class="functions-category" id="category-events">
+      <!-- Категория: Логика -->
+      <section class="functions-category" id="category-operators">
         <div class="sliding-content">
-          <!-- Квадратное событие (вставится в Цикл или Начало) -->
+          <div class="function-item" data-shape="diamond">
+            <div class="function-name">Если</div>
+            <div class="function-desc">if (условие)</div>
+          </div>
+          <div class="function-item" data-shape="diamond">
+            <div class="function-name">Если-Иначе</div>
+            <div class="function-desc">if / else</div>
+          </div>
           <div class="function-item" data-shape="square">
-            <div class="function-name">Клик</div>
-            <div class="function-desc">при нажатии</div>
+            <div class="function-name">Пока</div>
+            <div class="function-desc">while (условие)</div>
+          </div>
+          <div class="function-item" data-shape="square">
+            <div class="function-name">Вывести</div>
+            <div class="function-desc">print("текст" / x) </div>
           </div>
         </div>
       </section>
@@ -113,10 +101,16 @@
         </div>
       </div>
 
-      <!-- Сюда TypeScript будет добавлять блоки -->
+      <!-- Рабочая область -->
       <div class="workspace" id="workspace">
-        <div class="workspace-placeholder">
-          Перетащите сюда элементы из меню
+        <div class="workspace-placeholder">Перетащите сюда элементы из меню</div>
+      </div>
+
+      <!-- Окно вывода -->
+      <div class="console-container">
+        <div class="console-header">Терминал вывода</div>
+        <div class="console-output" id="console-output">
+          <div class="console-line system-msg">Готово к запуску...</div>
         </div>
       </div>
     </div>
