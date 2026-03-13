@@ -4,8 +4,7 @@ const CONFIG = {
     SELECTORS: {
         starts: '#category-starts',
         operator: '#category-operators',
-        variable: '#category-variables',
-        event: '#category-events'
+        variable: '#category-variables'
     },
     DEFAULT_POS: { left: 60, top: 60 },
 };
@@ -27,7 +26,7 @@ class Environment {
 class ExpressionParser {
     constructor(env) {
         this.pos = 0;
-        this.tokens = [];
+        this.tokens = []; // 
         this.env = env;
     }
     // Главная функция разбора строки
@@ -717,11 +716,9 @@ class Workspace {
         containers.forEach(container => {
             if (!container)
                 return;
-            // Берем только прямых детей
             const childBlocks = Array.from(container.querySelectorAll(':scope > .workspace-item:not(.dragging)'))
                 .map(el => el.blockInstance)
                 .filter(b => b);
-            // Сшиваем их в список
             for (let i = 0; i < childBlocks.length; i++) {
                 const block = childBlocks[i];
                 block.previous = null;

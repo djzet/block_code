@@ -1,5 +1,5 @@
 // Типы категорий для блоков
-type Category = 'starts' | 'operator' | 'variable' | 'event';
+type Category = 'starts' | 'operator' | 'variable';
 
 // Структура данных для создания нового блока
 interface ItemData {
@@ -14,8 +14,7 @@ const CONFIG = {
     SELECTORS: {
         starts: '#category-starts',
         operator: '#category-operators',
-        variable: '#category-variables',
-        event: '#category-events'
+        variable: '#category-variables'
     } as Record<Category, string>,
     DEFAULT_POS: { left: 60, top: 60 },
 };
@@ -36,7 +35,7 @@ class Environment {
 // Сам движок парсинга математики и логики
 class ExpressionParser {
     private pos = 0;
-    private tokens: string[] = [];
+    private tokens: string[] = []; // 
     private env: Environment;
 
     constructor(env: Environment) {

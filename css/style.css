@@ -82,12 +82,6 @@ header {
     background-color: #ffad58 !important;
 }
 
-.circle-blue,
-#category-events .function-item,
-.event-item {
-    background-color: #4dabf7 !important;
-}
-
 /* Меню блоков */
 .sliding {
     display: none;
