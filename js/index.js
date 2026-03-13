@@ -5,6 +5,7 @@ const CONFIG = {
         starts: '#category-starts',
         operator: '#category-operators',
         variable: '#category-variables',
+        string: '#category-string',
         event: '#category-events'
     },
     DEFAULT_POS: { left: 60, top: 60 },
@@ -830,11 +831,13 @@ class SlidingMenu {
         this.buttons = {
             starts: Utils.$('#button-tag-starts'),
             variables: Utils.$('#button-tag-variables'),
+            string: Utils.$('#button-tag-string'),
             operators: Utils.$('#button-tag-operators')
         };
         this.cats = {
             starts: Utils.$('#category-starts'),
             variables: Utils.$('#category-variables'),
+            string: Utils.$('#category-string'),
             operators: Utils.$('#category-operators')
         };
         this.activeBtn = null;

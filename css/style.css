@@ -82,6 +82,14 @@ header {
     background-color: #ffad58 !important;
 }
 
+/* Переменные */
+.circle-green,
+#category-string .function-item,
+.variable-item {
+    background-color: #66ff58 !important;
+}
+
+/* События */
 .circle-blue,
 #category-events .function-item,
 .event-item {
