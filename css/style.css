@@ -80,7 +80,7 @@ header {
 /* Переменные */
 .circle-green,
 #category-string .function-item,
-.variable-item {
+.string-item {
     background-color: #66ff58 !important;
 }
 

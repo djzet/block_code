@@ -1,4 +1,4 @@
-type Category = 'starts' | 'operator' | 'variable' | 'event';
+type Category = 'starts' | 'operator' | 'variable' | 'string';
 
 interface ItemData {
     name: string;
@@ -12,7 +12,7 @@ const CONFIG = {
         starts: '#category-starts',
         operator: '#category-operators',
         variable: '#category-variables',
-        event: '#category-events'
+        string: '#category-string'
     } as Record<Category, string>,
     DEFAULT_POS: { left: 60, top: 60 },
 };
@@ -1074,11 +1074,13 @@ class SlidingMenu {
     private buttons: Record<string, HTMLElement | null> = {
         starts: Utils.$('#button-tag-starts'),
         variables: Utils.$('#button-tag-variables'),
+        string: Utils.$('#button-tag-string'),
         operators: Utils.$('#button-tag-operators')
     };
     private cats: Record<string, HTMLElement | null> = {
         starts: Utils.$('#category-starts'),
         variables: Utils.$('#category-variables'),
+        string: Utils.$('#category-string'),
         operators: Utils.$('#category-operators')
     };
     private activeBtn: HTMLElement | null = null;
