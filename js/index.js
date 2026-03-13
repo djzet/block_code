@@ -26,7 +26,7 @@ class Environment {
 class ExpressionParser {
     constructor(env) {
         this.pos = 0;
-        this.tokens = []; // 
+        this.tokens = [];
         this.env = env;
     }
     // Главная функция разбора строки

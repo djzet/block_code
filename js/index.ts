@@ -35,7 +35,7 @@ class Environment {
 // Сам движок парсинга математики и логики
 class ExpressionParser {
     private pos = 0;
-    private tokens: string[] = []; // 
+    private tokens: string[] = [];
     private env: Environment;
 
     constructor(env: Environment) {
