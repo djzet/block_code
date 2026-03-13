@@ -182,7 +182,7 @@ class ExpressionParser {
                 if (op === '/') {
                     if (right === 0)
                         throw new Error("Деление на ноль");
-                    left = Math.trunc(left / right);
+                    left = left / right;
                 }
                 if (op === '%')
                     left = left % right;
@@ -466,7 +466,7 @@ class VarDeclBlock extends BaseBlock {
         for (let name of names) {
             if (!/^[a-zA-Z_]\w*$/.test(name))
                 throw new Error(`Недопустимое имя переменной: ${name}`);
-            env.vars[name] = { value: 0, type: 'number' };
+            env.vars[name] = { value: 0.0, type: 'number' };
         }
         Interpreter.print(`Объявлены переменные: ${names.join(', ')}`);
     }
