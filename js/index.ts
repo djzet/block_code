@@ -1,5 +1,5 @@
 // Типы категорий для блоков
-type Category = 'starts' | 'operator' | 'variable' | 'event';
+type Category = 'starts' | 'operator' | 'variable';
 
 // Структура данных для создания нового блока
 interface ItemData {
@@ -15,7 +15,6 @@ const CONFIG = {
         starts: '#category-starts',
         operator: '#category-operators',
         variable: '#category-variables',
-        event: '#category-events'
     } as Record<Category, string>,
     DEFAULT_POS: { left: 60, top: 60 },
 };
@@ -883,7 +882,6 @@ class Workspace {
 
             const wsRect = this.element!.getBoundingClientRect();
 
-            // Ставим блок там, где отпустили мышь
             let x = e.clientX - wsRect.left - (block.element.offsetWidth / 2) + this.element!.scrollLeft;
             let y = e.clientY - wsRect.top - (block.element.offsetHeight / 2) + this.element!.scrollTop;
 

@@ -5,7 +5,6 @@ const CONFIG = {
         starts: '#category-starts',
         operator: '#category-operators',
         variable: '#category-variables',
-        event: '#category-events'
     },
     DEFAULT_POS: { left: 60, top: 60 },
 };
@@ -762,7 +761,6 @@ class Workspace {
             const block = this.createBlock(JSON.parse(json));
             this.element.appendChild(block.element);
             const wsRect = this.element.getBoundingClientRect();
-            // Ставим блок там, где отпустили мышь
             let x = e.clientX - wsRect.left - (block.element.offsetWidth / 2) + this.element.scrollLeft;
             let y = e.clientY - wsRect.top - (block.element.offsetHeight / 2) + this.element.scrollTop;
             block.element.style.left = `${Math.max(0, x)}px`;
