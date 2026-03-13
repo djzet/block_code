@@ -76,4 +76,4 @@
 Используйте `tsc --watch` для обновления кода в реальном времени
 Пишите код в `index.ts`
 
-Проект работает по ссылке [text](https://djzet.github.io/block_code/)
+Проект работает по ссылке [сайт](https://djzet.github.io/block_code/)
