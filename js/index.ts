@@ -835,12 +835,10 @@ class Workspace {
 
         containers.forEach(container => {
             if (!container) return;
-            // Берем только прямых детей
             const childBlocks = Array.from(container.querySelectorAll(':scope > .workspace-item:not(.dragging)'))
                 .map(el => (el as any).blockInstance as BaseBlock)
                 .filter(b => b);
 
-            // Сшиваем их в список
             for (let i = 0; i < childBlocks.length; i++) {
                 const block = childBlocks[i];
                 block.previous = null;
