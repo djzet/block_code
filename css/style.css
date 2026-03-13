@@ -1,4 +1,4 @@
-/* Основное */
+/* Основные стили для блоков и интерфейса */
 body {
     display: flex;
     flex-direction: column;
@@ -6,6 +6,7 @@ body {
     margin: 0;
     padding: 0;
     font-family: sans-serif;
+    background-color: #f4f7f6;
 }
 
 main {
@@ -14,11 +15,12 @@ main {
     flex-direction: column;
 }
 
-/* Шапка и навигация */
 header {
     display: flex;
     flex-direction: column;
     width: 100%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
 }
 
 .tab {
@@ -34,6 +36,7 @@ header {
     text-decoration: none;
     color: black;
     font-weight: bold;
+    font-size: 1.5rem;
 }
 
 .button-tag {
@@ -44,6 +47,12 @@ header {
     padding: 5px 10px;
     cursor: pointer;
     background-color: white;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.button-tag:hover {
+    background-color: #f8f9fa;
 }
 
 .circle-tab {
@@ -55,36 +64,25 @@ header {
 }
 
 /* Цвета категорий */
-
-/* Стартовый набор */
 .circle-pink,
 #category-starts .function-item,
 .starts-item {
     background-color: #ffc0cb !important;
 }
 
-/* Операторы */
 .circle-red,
 #category-operators .function-item,
 .operator-item {
     background-color: #ff6b6b !important;
 }
 
-/* Переменные */
 .circle-orange,
 #category-variables .function-item,
 .variable-item {
     background-color: #ffad58 !important;
 }
 
-/* События */
-.circle-blue,
-#category-events .function-item,
-.event-item {
-    background-color: #4dabf7 !important;
-}
-
-/* Сползающее меню */
+/* Меню блоков */
 .sliding {
     display: none;
     width: 100%;
@@ -113,7 +111,7 @@ header {
     padding: 16px 24px;
 }
 
-/* Стили блока */
+/* Стили блоков */
 .function-item,
 .workspace-item {
     display: flex;
@@ -126,8 +124,7 @@ header {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: relative;
     user-select: none;
-    height: auto;
-    color: #000;
+    background-color: #fff;
 }
 
 .function-item {
@@ -145,7 +142,6 @@ header {
     margin-bottom: 4px;
 }
 
-/* Поле описания внутри блока */
 .item-desc,
 .function-desc {
     font-size: 11px;
@@ -154,7 +150,6 @@ header {
     padding: 2px 6px;
     border-radius: 4px;
     width: 100%;
-    box-sizing: border-box;
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -184,8 +179,6 @@ header {
     margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
-    flex-direction: row;
-    flex-wrap: wrap;
     align-items: center;
 }
 
@@ -194,6 +187,7 @@ header {
     color: #adb5bd;
     margin-top: 50px;
     pointer-events: none;
+    width: 100%;
 }
 
 /* Кнопка удаления */
@@ -201,8 +195,8 @@ header {
     position: absolute;
     top: 4px;
     right: 4px;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background-color: rgba(0, 0, 0, 0.2);
     color: white;
@@ -219,79 +213,54 @@ header {
     background-color: #ff4d4d;
 }
 
-/* Вложенность и слоты */
+/* Слоты */
 .block-slot {
     margin-top: 6px;
-    min-height: 28px;
+    min-height: 32px;
     border: 1px dashed rgba(0, 0, 0, 0.2);
     border-radius: 4px;
     width: 100%;
     background: rgba(255, 255, 255, 0.3);
     padding: 4px;
-    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-/* Подсветка слота при наведении */
 .block-slot.drag-over {
     background-color: rgba(0, 255, 0, 0.2);
-    border: 2px dashed #000;
+    border-color: #000;
 }
 
-/* Блоки внутри слота сбрасывают абсолютные координаты */
 .block-slot .workspace-item {
     position: relative !important;
     left: 0 !important;
     top: 0 !important;
     width: 100%;
-    box-sizing: border-box;
 }
 
-/* ВАЖНО: Делает перетаскиваемый блок прозрачным для курсора */
-.dragging {
-    opacity: 0.5;
-    pointer-events: none !important;
-}
-
-/* Формы блоков */
+/* Формы */
 .shape-square {
     border-radius: 4px !important;
 }
 
-.shape-square .block-slot {
-    border-radius: 2px;
-}
-
-/* Круглая форма */
 .shape-round {
     border-radius: 20px !important;
     padding: 8px 16px;
 }
 
-.shape-round .block-slot {
-    border-radius: 16px;
-}
-
-/* Ромбовидная форма */
 .shape-diamond {
     border-radius: 16px 0 16px 0 !important;
 }
 
-.shape-diamond .block-slot {
-    border-radius: 8px 0 8px 0;
-}
-
-/* Терминал / Консоль вывода */
+/* Терминал */
 .console-container {
     background-color: #1e1e1e;
     color: #00ff00;
     margin-top: 16px;
     border-radius: 8px;
     padding: 10px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 13px;
+    font-family: 'Courier New', monospace;
     height: 180px;
     display: flex;
     flex-direction: column;
@@ -299,24 +268,17 @@ header {
 }
 
 .console-header {
-    color: #aaaaaa;
+    color: #aaa;
     font-size: 11px;
     text-transform: uppercase;
     border-bottom: 1px solid #333;
-    padding-bottom: 4px;
     margin-bottom: 6px;
 }
 
 .console-output {
     overflow-y: auto;
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.console-line {
-    word-break: break-all;
+    font-size: 13px;
 }
 
 .system-msg {
@@ -327,65 +289,99 @@ header {
     color: #ff4d4d;
 }
 
-/* Подсветка ошибки синтаксиса */
-.error-highlight {
-    border: 2px solid red !important;
-    box-shadow: 0 0 15px rgba(255, 0, 0, 0.8) !important;
-    animation: shake 0.5s;
-}
-
-@keyframes shake {
-
-    0%,
-    100% {
-        transform: translateX(0);
-    }
-
-    25% {
-        transform: translateX(-5px);
-    }
-
-    75% {
-        transform: translateX(5px);
-    }
-}
-
-/* Инпуты для ввода данных внутри блоков */
 .block-input {
     width: 100%;
     margin-top: 4px;
     padding: 2px 6px;
-    border: 1px solid rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 4px;
-    font-family: monospace;
     font-size: 12px;
-    box-sizing: border-box;
-    cursor: text;
-    background-color: #fff;
 }
 
-.block-input:focus {
-    outline: 2px solid #0d6efd;
-    border-color: transparent;
-}
-
-/* Строка для нескольких инпутов */
 .input-row {
     display: flex;
-    width: 100%;
-    align-items: center;
     gap: 4px;
-    margin-top: 4px;
+    align-items: center;
+    width: 100%;
 }
 
-/* Подписи для слотов */
-.block-slot[data-label]::before {
-    content: attr(data-label);
-    font-size: 9px;
-    color: #555;
-    font-weight: bold;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-    display: block;
-    pointer-events: none;
+.dragging {
+    opacity: 0.5;
+    pointer-events: none !important;
+}
+
+@media (max-width: 1200px) {
+    .workspace-container {
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 800px) {
+    .tab {
+        height: auto;
+        padding: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .title {
+        width: 100%;
+        text-align: center;
+    }
+
+    .button-tag {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .workspace {
+        min-height: 300px;
+    }
+}
+
+@media (max-width: 450px) {
+    .text-tab {
+        display: none;
+    }
+
+    .circle-tab {
+        margin-right: 0;
+        width: 20px;
+        height: 20px;
+    }
+
+    .sliding-content {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .function-item {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .workspace-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .workspace-header h2 {
+        font-size: 18px;
+    }
+
+    .controls {
+        width: 100%;
+        display: flex;
+        gap: 5px;
+    }
+
+    .controls button {
+        flex: 1;
+    }
+
+    .block-input {
+        font-size: 16px;
+        height: 32px;
+    }
 }
