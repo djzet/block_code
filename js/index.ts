@@ -1,5 +1,11 @@
-// Типы категорий для блоков
-type Category = 'starts' | 'operator' | 'variable';
+// Тип для хранения переменных (значение + тип для проверки)
+interface Variable {
+    value: number | string;
+    type: 'number' | 'string';
+}
+
+// Категории блоков для организации в меню и определения логики вставки
+type Category = 'starts' | 'operator' | 'variable' | 'string';
 
 // Структура данных для создания нового блока
 interface ItemData {
@@ -14,17 +20,53 @@ const CONFIG = {
     SELECTORS: {
         starts: '#category-starts',
         operator: '#category-operators',
-        variable: '#category-variables'
+        variable: '#category-variables',
+        string: '#category-string'
     } as Record<Category, string>,
     DEFAULT_POS: { left: 60, top: 60 },
 };
 
 // Хранилище переменных и массивов во время работы программы
 class Environment {
-    public vars: Record<string, number> = {};
+    public vars: Record<string, Variable> = {};
     public arrays: Record<string, number[]> = {};
 
-    // Вычисляет то, что юзер написал в поле ввода
+    // Получает значение переменной, проверяя её существование
+    public getVar(name: string): number | string {
+        if (this.vars[name] === undefined) {
+            throw new Error(`Переменная ${name} не объявлена`);
+        }
+        return this.vars[name].value;
+    }
+
+    // Возвращает тип переменной (number или string)
+    public getVarType(name: string): 'number' | 'string' {
+        if (this.vars[name] === undefined) {
+            throw new Error(`Переменная ${name} не объявлена`);
+        }
+        return this.vars[name].type;
+    }
+
+    // Устанавливает значение переменной, проверяя её существование и тип
+    public setVar(name: string, value: number | string, expectedType: 'number' | 'string'): void {
+        if (this.vars[name] === undefined) {
+            throw new Error(`Переменная ${name} не объявлена`);
+        }
+        if (this.vars[name].type !== expectedType) {
+            throw new Error(`${name} — это ${this.vars[name].type}, ожидался ${expectedType}`);
+        }
+        this.vars[name].value = value;
+    }
+
+    // Объявляет новую переменную с заданным типом и начальным значением по умолчанию
+    public declareVar(name: string, type: 'number' | 'string'): void {
+        this.vars[name] = {
+            value: type === 'number' ? 0 : '',
+            type
+        };
+    }
+
+    // Основная функция для вычисления выражений (математика и логика)
     public evaluate(expr: string): any {
         if (!expr.trim()) return 0;
         const parser = new ExpressionParser(this);
@@ -44,7 +86,7 @@ class ExpressionParser {
 
     // Главная функция разбора строки
     public evaluate(expr: string): any {
-        const tokenRegex = /==|!=|<=|>=|&&|\|\||!|\bAND\b|\bOR\b|\bNOT\b|[a-zA-Z_]\w*|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|[+\-*/%()[\]<>,"']/gi;
+        const tokenRegex = /==|!=|<=|>=|&&|\|\||!|\bAND\b|\bOR\b|\bNOT\b|"[^"]*"|'[^']*'|[a-zA-Z_]\w*|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|[+\-*/%()[\]<>]/gi;
 
         this.tokens = (expr.match(tokenRegex) || []).map(t => t.trim());
         this.pos = 0;
@@ -245,7 +287,7 @@ class ExpressionParser {
             if (this.env.vars[tokenRaw] === undefined) {
                 throw new Error(`Переменная ${tokenRaw} не объявлена`);
             }
-            return this.env.vars[tokenRaw];
+            return this.env.vars[tokenRaw].value;
         }
 
         if (tokenRaw === '(') {
@@ -511,7 +553,7 @@ class VarDeclBlock extends BaseBlock {
 
         for (let name of names) {
             if (!/^[a-zA-Z_]\w*$/.test(name)) throw new Error(`Недопустимое имя переменной: ${name}`);
-            env.vars[name] = 0;
+            env.vars[name] = { value: 0, type: 'number' };
         }
         Interpreter.print(`Объявлены переменные: ${names.join(', ')}`);
     }
@@ -578,9 +620,76 @@ class AssignBlock extends BaseBlock {
             Interpreter.print(`${arrName}[${index}] = ${result}`);
         } else {
             if (env.vars[leftVal] === undefined) throw new Error(`Переменная ${leftVal} не объявлена`);
-            env.vars[leftVal] = result;
-            Interpreter.print(`${leftVal} = ${result}`);
+            if (env.vars[leftVal].type !== 'number')
+                throw new Error(`${leftVal} — это строка, используйте "Присвоить строку"`);
+            env.vars[leftVal].value = Number(result);
+            Interpreter.print(`${leftVal} = ${env.vars[leftVal].value}`);
         }
+    }
+}
+
+// Блок создания строк
+class StrDeclBlock extends BaseBlock {
+    protected getInnerTemplate(): string {
+        return '<input class="block-input" placeholder="str1, str2" title="Через запятую" />';
+    }
+
+    public canAccept(): boolean { return false; }
+
+    public isMovableToSlot(): boolean { return true; }
+
+    protected async runAction(env: Environment): Promise<void> {
+        const val = this.element.querySelector('input')?.value || '';
+        const names = val.split(',').map(s => s.trim()).filter(s => s);
+
+        if (names.length === 0)
+            throw new Error("Не указаны имена строк");
+
+        for (let name of names) {
+            if (!/^[a-zA-Z_]\w*$/.test(name))
+                throw new Error(`Недопустимое имя строки: ${name}`);
+            env.declareVar(name, 'string');
+        }
+
+        Interpreter.print(`Объявлены строки: ${names.join(', ')}`);
+    }
+}
+
+// Блок присваивания строк
+class AssignStrBlock extends BaseBlock {
+    getInnerTemplate() {
+        return `<div class="input-row">
+                    <input class="block-input assign-left" placeholder="str1" style="width: 40%"/> =
+                    <input class="block-input assign-right" placeholder="'string' or str2" style="width: 55%"/>
+                </div>`;
+    }
+
+    public canAccept(): boolean { return false; }
+
+    public isMovableToSlot(): boolean { return true; }
+
+    protected async runAction(env: Environment): Promise<void> {
+        const left = this.element.querySelector('.assign-left') as HTMLInputElement;
+        const right = this.element.querySelector('.assign-right') as HTMLInputElement;
+        const leftVal = left.value.trim();
+        const rightVal = right.value.trim();
+
+        if (!leftVal || !rightVal)
+            throw new Error("Пустое поле присваивания");
+
+        const result = env.evaluate(rightVal);
+        const arrMatch = leftVal.match(/^([a-zA-Z_]\w*)\[(.+)\]$/);
+        if (arrMatch) {
+            throw new Error(`Массивы строк не поддерживаются в "Присвоить строку"`);
+        }
+
+        if (env.vars[leftVal] === undefined)
+            throw new Error(`Переменная ${leftVal} не объявлена`);
+
+        if (env.getVarType(leftVal) !== 'string')
+            throw new Error(`${leftVal} — это число, используйте "Присвоить"`);
+        env.setVar(leftVal, String(result), 'string');
+        Interpreter.print(`${leftVal} = "${String(result)}"`);
     }
 }
 
@@ -733,6 +842,8 @@ class Workspace {
             case 'Переменная': return new VarDeclBlock(data, this);
             case 'Массив': return new ArrayDeclBlock(data, this);
             case 'Присвоить': return new AssignBlock(data, this);
+            case 'Строки': return new StrDeclBlock(data, this);
+            case 'Присвоить строку': return new AssignStrBlock(data, this);
             case 'Если': return new IfBlock(data, this);
             case 'Если-Иначе': return new IfElseBlock(data, this);
             case 'Пока': return new WhileBlock(data, this);
@@ -953,11 +1064,13 @@ class SlidingMenu {
     private buttons: Record<string, HTMLElement | null> = {
         starts: Utils.$('#button-tag-starts'),
         variables: Utils.$('#button-tag-variables'),
+        string: Utils.$('#button-tag-string'),
         operators: Utils.$('#button-tag-operators')
     };
     private cats: Record<string, HTMLElement | null> = {
         starts: Utils.$('#category-starts'),
         variables: Utils.$('#category-variables'),
+        string: Utils.$('#category-string'),
         operators: Utils.$('#category-operators')
     };
     private activeBtn: HTMLElement | null = null;
