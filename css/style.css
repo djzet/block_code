@@ -324,6 +324,29 @@ header {
     pointer-events: none !important;
 }
 
+/* Подсветка ошибки синтаксиса */
+.error-highlight {
+    border: 2px solid red !important;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.8) !important;
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
+}
+
 @media (max-width: 1200px) {
     .workspace-container {
         padding: 12px 16px;
