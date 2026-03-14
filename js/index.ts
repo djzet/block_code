@@ -833,6 +833,7 @@ class Workspace {
             case 'Начало': return new RootBlock(data, this);
             case 'Переменная': return new VarDeclBlock(data, this);
             case 'Массив': return new ArrayDeclBlock(data, this);
+            case 'Присвоить': return new AssignBlock(data, this);
             case 'Строки': return new StrDeclBlock(data, this);
             case 'Присвоить строку': return new AssignStrBlock(data, this);
             case 'Если': return new IfBlock(data, this);
