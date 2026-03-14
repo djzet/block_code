@@ -5,8 +5,7 @@ const CONFIG = {
         starts: '#category-starts',
         operator: '#category-operators',
         variable: '#category-variables',
-        string: '#category-string',
-        event: '#category-events'
+        string: '#category-string'
     },
     DEFAULT_POS: { left: 60, top: 60 },
 };
@@ -16,13 +15,6 @@ class Environment {
         this.vars = {};
         this.arrays = {};
     }
-    // Вычисляет то, что юзер написал в поле ввода
-    evaluate(expr) {
-        if (!expr.trim())
-            return 0;
-        const parser = new ExpressionParser(this);
-        return parser.evaluate(expr);
-    }
     // Вспомогательный метод: получить значение переменной
     getVar(name) {
         if (this.vars[name] === undefined) {
@@ -30,7 +22,6 @@ class Environment {
         }
         return this.vars[name].value;
     }
-    
     //получить тип переменной
     getVarType(name) {
         if (this.vars[name] === undefined) {
@@ -38,8 +29,6 @@ class Environment {
         }
         return this.vars[name].type;
     }
-    
-    // Установить значение переменной с проверкой типа
     setVar(name, value, expectedType) {
         if (this.vars[name] === undefined) {
             throw new Error(`Переменная ${name} не объявлена`);
@@ -48,6 +37,16 @@ class Environment {
             throw new Error(`${name} — это ${this.vars[name].type}, ожидался ${expectedType}`);
         }
         this.vars[name].value = value;
+    }
+    declareVar(name, type) {
+        this.vars[name] = { value: type === 'number' ? 0 : '', type };
+    }
+    // Вычисляет то, что юзер написал в поле ввода
+    evaluate(expr) {
+        if (!expr.trim())
+            return 0;
+        const parser = new ExpressionParser(this);
+        return parser.evaluate(expr);
     }
 }
 // Сам движок парсинга математики и логики
@@ -182,7 +181,7 @@ class ExpressionParser {
                 if (op === '/') {
                     if (right === 0)
                         throw new Error("Деление на ноль");
-                    left = left / right;
+                    left = Math.trunc(left / right);
                 }
                 if (op === '%')
                     left = left % right;
@@ -466,7 +465,7 @@ class VarDeclBlock extends BaseBlock {
         for (let name of names) {
             if (!/^[a-zA-Z_]\w*$/.test(name))
                 throw new Error(`Недопустимое имя переменной: ${name}`);
-            env.vars[name] = { value: 0.0, type: 'number' };
+            env.vars[name] = { value: 0, type: 'number' };
         }
         Interpreter.print(`Объявлены переменные: ${names.join(', ')}`);
     }
@@ -535,7 +534,9 @@ class AssignBlock extends BaseBlock {
 }
 // Блок создания строк
 class StrDeclBlock extends BaseBlock {
-    getInnerTemplate() { return '<input class="block-input" placeholder="str1, str2" title="Через запятую" />'; }
+    getInnerTemplate() {
+        return '<input class="block-input" placeholder="str1, str2" title="Через запятую" />';
+    }
     canAccept() { return false; }
     isMovableToSlot() { return true; }
     async runAction(env) {
@@ -546,7 +547,7 @@ class StrDeclBlock extends BaseBlock {
         for (let name of names) {
             if (!/^[a-zA-Z_]\w*$/.test(name))
                 throw new Error(`Недопустимое имя строки: ${name}`);
-            env.vars[name] = { value: "", type: 'string' };
+            env.declareVar(name, 'string');
         }
         Interpreter.print(`Объявлены строки: ${names.join(', ')}`);
     }
@@ -559,8 +560,12 @@ class AssignStrBlock extends BaseBlock {
                     <input class="block-input assign-right" placeholder="'string' or str2" style="width: 55%"/>
                 </div>`;
     }
-    canAccept() { return false; }
-    isMovableToSlot() { return true; }
+    canAccept() {
+        return false;
+    }
+    isMovableToSlot() {
+        return true;
+    }
     async runAction(env) {
         const left = this.element.querySelector('.assign-left');
         const right = this.element.querySelector('.assign-right');
@@ -571,22 +576,14 @@ class AssignStrBlock extends BaseBlock {
         const result = env.evaluate(rightVal);
         const arrMatch = leftVal.match(/^([a-zA-Z_]\w*)\[(.+)\]$/);
         if (arrMatch) {
-            const arrName = arrMatch[1];
-            const index = env.evaluate(arrMatch[2]);
-            if (!env.arrays[arrName])
-                throw new Error(`Массив ${arrName} не существует`);
-            if (index < 0 || index >= env.arrays[arrName].length)
-                throw new Error(`Индекс ${index} вне границ ${arrName}`);
-            env.arrays[arrName][index] = result;
-            Interpreter.print(`${arrName}[${index}] = "${result}"`);
-            return;
+            throw new Error(`Массивы строк не поддерживаются в "Присвоить строку"`);
         }
         if (env.vars[leftVal] === undefined)
             throw new Error(`Переменная ${leftVal} не объявлена`);
-        if (env.vars[leftVal].type !== 'string')
+        if (env.getVarType(leftVal) !== 'string')
             throw new Error(`${leftVal} — это число, используйте "Присвоить"`);
-        env.vars[leftVal].value = String(result);
-        Interpreter.print(`${leftVal} = "${env.vars[leftVal].value}"`);
+        env.setVar(leftVal, String(result), 'string');
+        Interpreter.print(`${leftVal} = "${String(result)}"`);
     }
 }
 // Блок ветвления "Если"
@@ -719,7 +716,6 @@ class Workspace {
             case 'Начало': return new RootBlock(data, this);
             case 'Переменная': return new VarDeclBlock(data, this);
             case 'Массив': return new ArrayDeclBlock(data, this);
-            case 'Присвоить': return new AssignBlock(data, this);
             case 'Строки': return new StrDeclBlock(data, this);
             case 'Присвоить строку': return new AssignStrBlock(data, this);
             case 'Если': return new IfBlock(data, this);
@@ -804,11 +800,9 @@ class Workspace {
         containers.forEach(container => {
             if (!container)
                 return;
-            // Берем только прямых детей
             const childBlocks = Array.from(container.querySelectorAll(':scope > .workspace-item:not(.dragging)'))
                 .map(el => el.blockInstance)
                 .filter(b => b);
-            // Сшиваем их в список
             for (let i = 0; i < childBlocks.length; i++) {
                 const block = childBlocks[i];
                 block.previous = null;
